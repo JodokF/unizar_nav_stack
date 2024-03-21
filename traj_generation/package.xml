@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>traj_generation</name>
+
+  <version>0.0.0</version>
+  <description>The traj_generation package</description>
+
+  <maintainer email="caspar.conradi@posteo.org">arob</maintainer>
+  <license>TODO</license>
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <build_depend>roscpp</build_depend>
+  <build_depend>std_msgs</build_depend>
+  <exec_depend>roscpp</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <build_depend>geometry_msgs</build_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+
+  <depend>eigen_catkin</depend>
+  <depend>mav_msgs</depend>
+  <depend>moveit_core</depend>
+  <depend>mav_trajectory_generation</depend>
+  <depend>mav_trajectory_generation_ros</depend>
+  <depend>mav_visualization</depend>
+  <depend>mav_planning_msgs</depend>
+  <depend>eigen_checks</depend>
+  <depend>roslib</depend>
+  <depend>hector_uav_msgs</depend>
+  <depend>hector_moveit_actions</depend>
+
+  <export>
+
+  </export>
+
+</package>

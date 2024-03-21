@@ -1,0 +1,56 @@
+<launch>
+
+    <!-- <node name="gazebo_killer" pkg="hector_moveit_config" type="gazebo_killer.sh"/> -->
+    <!-- <arg name="use_ground_truth_for_tf" default="true"/>
+    <arg name="headless" default="true"/>
+    <arg name="use_gui" default="false"/>
+    <arg name="debug" default="false" /> -->
+
+    <!-- The name of the parameter under which the URDF is loaded -->
+    <!-- <arg name="robot_description" default="robot_description"/> -->
+        
+    <!-- <node name="trajectory_controller_dwa" pkg="hector_moveit_actions" type="trajectory_controller_dwa" respawn="false" output="screen"/> -->
+    <!-- <rosparam command="load" file="$(find hector_moveit_actions)/config/trajectory_executer_voxmap.yaml" /> -->
+
+    <!--using my own ptp algorithm -->
+    <node name="traj_generation_real_drone" pkg="traj_generation" type="traj_generation_real_drone" respawn="false" output="screen"/>
+
+    <!-- opens: src/velocity_command.cpp -->
+    <!-- <node pkg="hector_moveit_actions" type="velocity_command" name="velocity_command" args="" output="screen"/> -->
+
+
+    <!-- paint the drone trajectory in rviz-->
+    <node pkg="hector_trajectory_server" type="hector_trajectory_server" name="trajectory_server_loam" ns="gt" >
+        <param name="/target_frame_name" value="odom" />
+        <param name="/source_frame_name" value="cine_mpc" />
+        <param name="/trajectory_update_rate" value="10.0" />
+        <param name="/trajectory_publish_rate" value="10.0" />
+    </node>
+
+    <!-- We do not have a robot connected, so publish fake joint states -->
+    <!-- <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" >
+        <param name="use_gui" value="true"/>
+        <param name="publish_frequency" type="double" value="50.0" />
+    </node>   -->
+
+
+    <!-- <node pkg="tf" type="static_transform_publisher" name="world_2_odom" args="$0 0 0 0 0 0 odom world 100" /> -->
+    <!-- <node pkg="tf" type="static_transform_publisher" name="world_2_base_link" args="$0 0 0 0 0 0 world base_link 100" /> -->
+    <!-- <node pkg="tf" type="static_transform_publisher" name="odom_ned_2_base_link" args="$0 0 0 0 0 0 odom_ned base_link 100" />  -->
+
+    <!-- Launching the urdf for the robot -->
+    <!-- <include file="$(find hector_quadrotor_gazebo)/launch/spawn_quadrotor_ouster.launch">
+        <arg name="tf_prefix" value=""/>
+        <arg name="use_ground_truth_for_tf" value="$(arg use_ground_truth_for_tf)" />
+
+        <arg name="x" value="-1"/>
+        <arg name="y" value="2"/>
+        <arg name="z" value="0.3"/>
+    </include> -->
+
+
+
+
+</launch>
+
+

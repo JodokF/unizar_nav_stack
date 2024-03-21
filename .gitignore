@@ -1,32 +1,16 @@
-# Prerequisites
-*.d
+# data_recording/
+# hector_gazebo/
+# hector_localization/
+# hector_models/
+hector_quadrotor/
+# optitrack_arena/
+# px4_tyrion/
+rotors_description/
+# traj_generation/
+# velodyne_simulator/
+# hector_moveit_actions/
+voxblox/
 
-# Compiled Object files
-*.slo
-*.lo
-*.o
-*.obj
 
-# Precompiled Headers
-*.gch
-*.pch
 
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
 
-# Fortran module files
-*.mod
-*.smod
-
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
-
-# Executables
-*.exe
-*.out
-*.app

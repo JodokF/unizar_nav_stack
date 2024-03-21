@@ -1,0 +1,38 @@
+<launch>
+    <arg name="scene" default="tunel"/>
+    <arg name="debug" default="false"/>
+    <!-- <node name="trajectory_controller_dwa" pkg="hector_moveit_actions" type="trajectory_controller_dwa" respawn="false" output="screen"/> -->
+    <!-- <rosparam command="load" file="$(find hector_moveit_actions)/config/trajectory_executer_voxmap.yaml" /> -->
+
+    <!--using my own ptp algorithm -->
+    <node name="traj_generation_sim" pkg="traj_generation" type="traj_generation_sim" respawn="false" output="screen"/>
+
+    <!-- opens: src/velocity_command.cpp -->
+    <node pkg="hector_moveit_actions" type="velocity_command" name="velocity_command" args="" output="screen"/>
+
+    <!-- Point cloud merger node -->
+    <!-- opens: src/simulation_point_cloud_merger_node.cpp-->
+    <!-- <rosparam command="load" file="$(find hector_moveit_exploration)/config/cloud_merger_parameters.yaml" /> -->
+    <!-- <node name="point_cloud_merger" pkg="hector_moveit_exploration" type="simulation_point_cloud_merger_node" respawn="false" output="screen"/> -->
+
+    <!-- Rviz falla a veces si el move_group de MoveIt no ha acabado de inicializarse, es mejor ejecutarlo posteriormente-->
+    <!-- <node pkg="rviz" type="rviz" name="rviz" args="-d $(find traj_generation)/cnfg/cnfg.rviz" output="screen"/> -->
+ 
+    <!-- Launch optitrack -->
+    <!-- <node pkg="optitrack_arena" type="tyrion_gt_optitrack.launch" name="optitrack_arena" launch-prefix="roslaunch"/> -->
+
+
+
+    <!-- Trajectory Visualization: -->
+    <node pkg="hector_trajectory_server" type="hector_trajectory_server" name="trajectory_server_loam" ns="gt" >
+        <param name="/target_frame_name" value="odom" />
+        <param name="/source_frame_name" value="base_link" />
+        <param name="/trajectory_update_rate" value="10.0" />
+        <param name="/trajectory_publish_rate" value="10.0" />
+    </node>
+
+
+
+</launch>
+
+

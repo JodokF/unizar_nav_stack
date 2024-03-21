@@ -1,0 +1,24 @@
+# Control Parameters
+T_control: 0.1
+VX_MAX: 1 #Default = 1
+VZ_MAX: 0.5 #Default = 0.5
+W_MAX: 0.523 # 30º --> 15º ??, Default = PI/9
+R_drone: 0.5 #[m], Default = 0.5
+LIDAR_MAX_RANGE: 10 #Rango máximo de sensor velodyne [m]. Es el mismo definido en VLP-16.urdf.xacro, Default = 10
+AZIMUTH_SEARCH_RANGE: 0.26179938779 #Resolución angular [°] en azimuth 15
+ELEVATION_SEARCH_RANGE: 0.26179938779 #Resolución angular [°] en elevation 15
+iter_obs: 10 #iter_obs*T = Periodo [s] de actualización de obstáculos = Horizonte temporal en la predicción de posición
+iter_update: 150
+
+/ALFA: 0.25
+/Ky: 0.5
+/Kz: 0.5 
+/BETA: 0.65
+/GAMMA: 0.1 
+/goal_step: 0.5
+/subgoal_step: 2
+
+
+#Topics and frames
+cmd_vel_control_topic: /cmd_vel_control
+ground_control_topic: /groudn_truth/state

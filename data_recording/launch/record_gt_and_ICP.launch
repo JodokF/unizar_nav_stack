@@ -1,0 +1,8 @@
+<launch>
+    <!-- Record GT Pose -->
+    <node name="gt_path_recorder" pkg="data_recording" type="trajectory_recorder_node" respawn="false" output="screen" args="/optitrack/pose /path_gt">
+    </node>
+    <!-- Record ICP Pose -->
+    <node name="ICP_path_recorder" pkg="data_recording" type="trajectory_recorder_node" respawn="false" output="screen" args="/ICP/pose_estimation /ICP/path">
+    </node>
+</launch>
