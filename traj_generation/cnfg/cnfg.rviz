@@ -9,6 +9,7 @@ Panels:
         - /VoxbloxMesh1
         - /MarkerArray1
         - /RobotModel1
+        - /Path1
       Splitter Ratio: 0.5
     Tree Height: 728
   - Class: rviz/Selection
@@ -71,7 +72,8 @@ Visualization Manager:
       Marker Topic: /voxblox_rrt_planner/path
       Name: MarkerArray
       Namespaces:
-        {}
+        rrt_star: true
+        rrt_star_waypoints: true
       Queue Size: 100
       Value: true
     - Class: rviz/InteractiveMarkers
@@ -106,6 +108,18 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: false
+        base_link:
+          Value: true
+        base_link_frd:
+          Value: true
+        cine_mpc:
+          Value: true
+        goal_optitrack:
+          Value: true
+        map:
+          Value: true
+        map_ned:
+          Value: true
         odom:
           Value: true
         odom_ned:
@@ -117,7 +131,17 @@ Visualization Manager:
       Show Axes: true
       Show Names: true
       Tree:
+        base_link:
+          base_link_frd:
+            {}
+        map:
+          map_ned:
+            {}
         odom:
+          cine_mpc:
+            {}
+          goal_optitrack:
+            {}
           odom_ned:
             {}
       Update Interval: 0
@@ -134,7 +158,7 @@ Visualization Manager:
     - Alpha: 1
       Buffer Length: 1
       Class: rviz/Path
-      Color: 0; 67; 255
+      Color: 237; 212; 0
       Enabled: true
       Head Diameter: 0.30000001192092896
       Head Length: 0.20000000298023224
@@ -160,7 +184,7 @@ Visualization Manager:
       Marker Topic: /waypoint_markers
       Name: MarkerArray
       Namespaces:
-        {}
+        waypoints: true
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -168,7 +192,7 @@ Visualization Manager:
       Marker Topic: /trajectory_markers
       Name: MarkerArray
       Namespaces:
-        {}
+        point: true
       Queue Size: 100
       Value: true
   Enabled: true
@@ -199,7 +223,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 11.497309684753418
+      Distance: 6.067497730255127
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -215,9 +239,9 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.4297964572906494
+      Pitch: 0.39479586482048035
       Target Frame: <Fixed Frame>
-      Yaw: 2.980407953262329
+      Yaw: 3.985402822494507
     Saved: ~
 Window Geometry:
   Displays:

@@ -20,7 +20,7 @@
       trackers:
       #- dummy
       #- base_link
-      #- goal_optitrack
+      - goal_optitrack
       #- calibration_base
       - cine_mpc
     </rosparam>
@@ -43,6 +43,7 @@
       <param name="/trajectory_update_rate" value="10.0" />
       <param name="/trajectory_publish_rate" value="10.0" />
   </node>
+
 
 
 

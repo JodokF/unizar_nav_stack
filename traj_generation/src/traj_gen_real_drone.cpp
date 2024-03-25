@@ -6,7 +6,7 @@ poly_traj_plan::poly_traj_plan(ros::NodeHandle& nh){
 
     //default_odom_topic = "/ground_truth/state";
     //default_odom_topic = "/vrpn_client_node/cine_mpc/pose";
-    default_odom_topic = "/optitrack/pose"; // = cine_mpc drone pose (when right launch file is executed)
+    default_odom_topic = "/optitrack/pose"; // = cine_mpc drone pose (when the correct launch file is executed)
     default_goal_topic = "/vrpn_client_node/goal_optitrack/pose";
 
     nh.param("/odom_topic", odom_topic, default_odom_topic);
@@ -52,7 +52,7 @@ poly_traj_plan::poly_traj_plan(ros::NodeHandle& nh){
 }
 
 real_drone_connection::real_drone_connection(ros::NodeHandle& nh){
-
+    
     real_vel_pub = nh.advertise<geometry_msgs::Twist>
             ("/mavros/setpoint_velocity/cmd_vel_unstamped", 10);
 
@@ -91,7 +91,7 @@ real_drone_connection::real_drone_connection(ros::NodeHandle& nh){
 
 void real_drone_connection::state_cb(const mavros_msgs::State::ConstPtr& msg){
     current_state = *msg;
-    std::cout << "--- Curr. State: " << current_state.mode << "\n";
+    // std::cout << "--- Curr. State: " << current_state.mode << "\n";
 }
 
 void real_drone_connection::pose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg){
@@ -162,6 +162,7 @@ bool poly_traj_plan::generate_trajectory() {
         // make start point: 
     start.makeStartOrEnd(Eigen::Vector3d(odom_info.pose.position.x,odom_info.pose.position.y,0.8), derivative_to_optimize);
 
+    std::cout << "\n---\n";
     std::cout << "Start x, y, z: \t"    << odom_info.pose.position.x << ", " 
                                         << odom_info.pose.position.y << ", " 
                                         << odom_info.pose.position.z << std::endl;
@@ -217,12 +218,13 @@ bool poly_traj_plan::generate_trajectory() {
 
     }
 
-    // make end point: 
-    end.makeStartOrEnd(Eigen::Vector3d(goal.pose.position.x,goal.pose.position.y,goal.pose.position.z), derivative_to_optimize);
+    // make end point, z + 1 meter: 
+    end.makeStartOrEnd(Eigen::Vector3d(goal.pose.position.x,goal.pose.position.y,goal.pose.position.z + 1), derivative_to_optimize);
     vertices.push_back(end);
     std::cout << "Goal x, y, z: \t" << goal.pose.position.x << ", " 
                                     << goal.pose.position.y << ", " 
-                                    << goal.pose.position.z << std::endl;
+                                    << goal.pose.position.z + 1 << std::endl;
+    std::cout << "\n---\n";
 
     
     // TODO understand this:
@@ -253,6 +255,7 @@ bool poly_traj_plan::generate_trajectory() {
     // Example to access the data
     std::cout << "Trajectory time = " << trajectory.getMaxTime() << std::endl;
     std::cout << "Number of states = " << traj_states.size() << std::endl;
+    std::cout << "Sampling intervall = " << sampling_interval << std::endl;
     //std::cout << "Position (world frame) at stamp " << 25 << ", x = " << traj_states[25].position_W.x() << std::endl;
     //std::cout << "Velocity (world frame) at stamp " << 25 << ", x = " << traj_states[25].velocity_W.x() << std::endl;
 
@@ -447,13 +450,11 @@ int poly_traj_plan::run_navigation_node(){
     // start_pose is assigened in the odom callback
     request.request.start_pose.pose.position.x = odom_info.pose.position.x;
     request.request.start_pose.pose.position.y = odom_info.pose.position.y;
-    //request.request.start_pose.header.stamp = odom_info.header.stamp;
-    //request.request.start_pose.header.frame_id = odom_info.header.frame_id;
-    request.request.start_pose.pose.position.z = 1.2;//odom_info.pose.position.z;
+    request.request.start_pose.pose.position.z = odom_info.pose.position.z; // 1.2;
 
     request.request.goal_pose.pose.position.x = goal.pose.position.x;
     request.request.goal_pose.pose.position.y = goal.pose.position.y;
-    request.request.goal_pose.pose.position.z = 1.2;
+    request.request.goal_pose.pose.position.z = 1.2; // goal.pose.position.z;
 
     // requesting voxblox-rrt-planner to plan:
     try {
@@ -461,7 +462,7 @@ int poly_traj_plan::run_navigation_node(){
             ROS_WARN_STREAM("Couldn't call service: " << planner_service);
             return -1;
         }
-        else ROS_ERROR_STREAM("Planner Service fail.");
+        else ROS_INFO("Planner Service called.");
     } 
     catch (const std::exception& e) {
         ROS_ERROR_STREAM("Service Exception: " << e.what());
@@ -491,6 +492,7 @@ int poly_traj_plan::run_navigation_node(){
 
 int real_drone_connection::establish_drone_connection(){
     
+    ROS_INFO("Trying to establishe connection to the Drone.");
     //tf2_ros::Buffer tf_buffer_;
     //tf2_ros::TransformListener tf_listener_(tf_buffer_, nh);
 
@@ -498,12 +500,13 @@ int real_drone_connection::establish_drone_connection(){
     ros::Rate rate(20.0);
 
     // wait for FCU connection
-    int debugg_int = 0;
+    int msg_int = 0;
     while(ros::ok() && !current_state.connected){
-        debugg_int++;
-        if (debugg_int % 10 == 0) std::cout << "Waiting for connection to mav ros\n";
+        msg_int++;
+        if (msg_int % 20 == 0) std::cout << "Waiting for connection to MavRos\n";
         ros::spinOnce();
         rate.sleep();
+        if (msg_int == 200) return -1;
     }
 
 
@@ -514,7 +517,7 @@ int real_drone_connection::establish_drone_connection(){
 
     //send a few setpoints before starting
     for(int i = 100; ros::ok() && i > 0; --i){
-        real_vel_pub.publish(cmd_vel);
+        real_vel_pub.publish(cmd_vel); // cmd_vel = 0 velocity
         ros::spinOnce();
         rate.sleep();
     }
@@ -530,18 +533,23 @@ int real_drone_connection::establish_drone_connection(){
     
     //LOOP UNTIL POSITION AND ARMED
     ros::Rate wait_rate(1.0);
-    
+
+    msg_int = 0;
+    std::cout << "Arm manually and enable position mode before going offboard.\n";
     while(ros::ok() && !current_state.armed && current_state.mode != "POSITION"){
-        ROS_INFO("Arm manually and enable position mode before going offboard");
+        if (msg_int % 4 == 0)  std::cout << "Arm manually and enable position mode before going offboard.\n";
+        msg_int++;
         ros::spinOnce();
         wait_rate.sleep();
+        if (msg_int == 180) return -1;
     }
     
     bool offboard = false;
 
     //LOOP UNTIL OFFBOARD
+    msg_int = 0;
     do{
-        ROS_INFO("Trying to go offboard");
+        if(msg_int % 20 == 0) ROS_INFO("Trying to go offboard");
         //Pass offboard
         offb_set_mode.request.custom_mode = "OFFBOARD";
 
@@ -550,9 +558,10 @@ int real_drone_connection::establish_drone_connection(){
             offboard = true;
         }else{
             if(!current_state.armed){
-                ROS_INFO("NOT ARMED, ARM FIRST");
+                if(msg_int % 20 == 0) ROS_INFO("NOT ARMED, ARM FIRST");
             }
         }
+        msg_int++;
     }while(ros::ok() && !offboard);
     // --------END OF ARMING AND OFFBOARD --------------
 
@@ -560,12 +569,13 @@ int real_drone_connection::establish_drone_connection(){
 
 }
 
-bool real_drone_connection::send_vel_commands(  const mav_msgs::EigenTrajectoryPoint& traj_state, 
-                                                double threshold_from_trajectory){
+//bool real_drone_connection::send_vel_commands(  const mav_msgs::EigenTrajectoryPoint& traj_state, 
+//                                                double threshold){
+bool real_drone_connection::send_vel_commands(){
     
-    bool threshold = threshold_from_trajectory;
+    // double threshold = threshold_from_trajectory;
     bool vel_checker = false;
-
+/*
     if (traj_state.velocity_W.x()         < threshold &&
         traj_state.velocity_W.y()         < threshold &&
         traj_state.velocity_W.z()         < threshold &&
@@ -579,19 +589,28 @@ bool real_drone_connection::send_vel_commands(  const mav_msgs::EigenTrajectoryP
             return false;
     }
 
-    if(vel_checker == true){ 
+    // if(vel_checker == true){ 
+    if(true){ //debugging
         vel_msg.linear.x = traj_state.velocity_W.x();
         vel_msg.linear.y = traj_state.velocity_W.y();
         vel_msg.linear.z = traj_state.velocity_W.z();
         vel_msg.angular.x = traj_state.angular_velocity_W.x();
         vel_msg.angular.y = traj_state.angular_velocity_W.y();
         vel_msg.angular.z = traj_state.angular_velocity_W.z();
+*/
+            
+    geometry_msgs::Twist cmd_vel_debug;
+    cmd_vel_debug.linear.x = 0.1;
+    cmd_vel_debug.linear.y = 0;
+    cmd_vel_debug.linear.z = 0;
+    cmd_vel_debug.angular.x = 0;
+    cmd_vel_debug.angular.y = 0;
+    cmd_vel_debug.angular.z = 0; //5.0/180 * M_PI;
 
-        // Publish the command
-        
-        // real_vel_pub.publish(vel_msg);
-        std::cout << "--- Published Vels: \n" << vel_msg << "\n";
-    }
+    // Publish the command
+    real_vel_pub.publish(cmd_vel_debug);
+    std::cout << "--- \nVelocities: \n" << cmd_vel_debug << "\n";
+    //}
     return true;
 
 }
@@ -608,64 +627,80 @@ int main(int argc, char** argv){
     poly_traj_plan ptp(std::ref(node_handle));
     int current_traj_state = 0;
 
+    // TODO: Arming and Takeoff from code:
     // if (ptp.takeoff() == 1) ROS_INFO("Take-off succesfull");
 
-    /*
+    real_drone_connection drone(std::ref(node_handle));
+    
+    
     // run the navigation node and get the trajectory    
-    int nav_function_checker = ptp.run_navigation_node();
-    if (nav_function_checker == 0) ROS_INFO("Navigation succesfully");
-    else if (nav_function_checker == -1 ){
+    std::cout << ("\n\n---\n\n");
+    int nav_func_checker = ptp.run_navigation_node();
+
+    if (nav_func_checker == 0) ROS_INFO("Navigation succesfully");
+    else if (nav_func_checker == -1 ){
         ROS_ERROR("Navigation error");
         return -1;
     }
     
-    
     std::cout << "\n\n\n !!! Check the trajectory in RViz before take off!!! \n\n\n";
     ros::Duration(3).sleep();
-    std::cout << "Press a key to continue.";
-    // Wait for any input from the user
-    std::cin.get();
-    */
+    std::cout << "Do you want to continue? (y/n): ";
+    
+    // Declare a variable to store user input
+    char userInput;
+    std::cin >> userInput; // Read user input
+    
+    // Check if the user wants to continue or abort
+    if (userInput == 'y' || userInput == 'Y') {
+    } else if (userInput == 'n' || userInput == 'N') {
+        ROS_ERROR("Aborting program");
+        return 0; // Exit the program
+    } else {
+        // Handle invalid input
+        ROS_ERROR("Invalid input.");
+        return 1; // Exit the program with an error code
+    }
+
+    
 
     // setting up the real drone
-    real_drone_connection drone(std::ref(node_handle));
-    
     if (drone.establish_drone_connection() != 0) {
-        ROS_ERROR("Drone connection not possible");
+        ROS_ERROR("Drone connection not possible.");
         return -1;
     }
+    else ROS_INFO("Drone connection established.");
+
+
+    ros::Rate rate(20.0);
+    while(ros::ok()){
+
+        drone.send_vel_commands();
+        ros::spinOnce();
+        rate.sleep();
+    }
+
+
+
 
 /*
     // sending vel commands to the real drone
     while(ros::ok() && current_traj_state < ptp.traj_states.size()){
 
         if (current_traj_state < ptp.traj_states.size()){
+            // vel_threashold to avoid to high velocities
             drone.send_vel_commands(ptp.traj_states.at(current_traj_state), ptp.vel_threshold);
         }
         // debug output:
-        //if (current_traj_state % 5 == 0) std::cout << "Velocitie published! \n";
+        // if (current_traj_state % 5 == 0) std::cout << "Velocitie published! \n";
     
         current_traj_state++;
         // sampling_interval comes from the trajectory generation
         ros::Duration(ptp.sampling_interval).sleep();
     }
-
 */
 
-    // I guess debugg:
-    geometry_msgs::Twist cmd_vel;
-    cmd_vel.linear.x = 0;
-    cmd_vel.linear.y = 0;
-    cmd_vel.linear.z = 0;
-    cmd_vel.angular.x = 0;
-    cmd_vel.angular.y = 0;
-    cmd_vel.angular.z = -0.2; 
 
-    while(ros::ok()){
-        drone.real_vel_pub.publish(cmd_vel);
-        ros::spinOnce();
-        ros::Duration(0.5).sleep();
-    }
 
     return 0;
 

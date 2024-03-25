@@ -48,7 +48,7 @@ class poly_traj_plan{
 
         bool waypoints_received, odom_received, goal_recieved, planner_service_called;
         int nmbr_of_states, curr_state, waypoint_cntr, marker_cntr;
-
+        
         ros::Subscriber plan_sub, pose_sub, goal_sub;
         ros::Publisher vel_pub, mav_traj_markers_pub, marker_pub, pose_pub, vel_pub_2_real_drone;
         std::string odom_topic, default_odom_topic, goal_topic, default_goal_topic, planner_service;
@@ -97,6 +97,7 @@ class poly_traj_plan{
 class real_drone_connection{
     private:
         ros::Subscriber current_pose_sub, planned_vel_sub, state_sub;
+        ros::Publisher real_vel_pub;
         ros::ServiceClient arming_client, set_cmd_vel_frame, set_mode_client;
 
         geometry_msgs::Twist vel_msg;
@@ -114,13 +115,14 @@ class real_drone_connection{
 
     real_drone_connection(ros::NodeHandle& nh);
     int establish_drone_connection();
-    bool send_vel_commands(const mav_msgs::EigenTrajectoryPoint&, double);
+    //bool send_vel_commands(const mav_msgs::EigenTrajectoryPoint&, double);
+    bool send_vel_commands();
     geometry_msgs::PoseStamped current_pose;
     mavros_msgs::State current_state;
     geometry_msgs::Twist planned_vel;
     geometry_msgs::Twist cmd_vel;
 
-    ros::Publisher real_vel_pub;
+
 
 
 };

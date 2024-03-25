@@ -76,12 +76,12 @@ int main(int argc, char **argv)
 
 
     geometry_msgs::Twist cmd_vel;
-    cmd_vel.linear.x = 0;
+    cmd_vel.linear.x = 0.1;
     cmd_vel.linear.y = 0;
     cmd_vel.linear.z = 0;
     cmd_vel.angular.x = 0;
     cmd_vel.angular.y = 0;
-    cmd_vel.angular.z = -0.2; //5.0/180 * M_PI;
+    cmd_vel.angular.z = -0.1; //5.0/180 * M_PI;
     
     
     //------------SEND INITIAL 100 POINTS TO CHANGE TO OFFBOARD------------------
