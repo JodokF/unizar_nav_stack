@@ -7,7 +7,7 @@ hector_quadrotor/
 # px4_tyrion/
 rotors_description/
 # traj_generation/
-# velodyne_simulator/
+velodyne_simulator/
 # hector_moveit_actions/
 voxblox/
 
