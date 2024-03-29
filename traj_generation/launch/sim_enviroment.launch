@@ -4,7 +4,7 @@
   <!-- <node name="gazebo_killer" pkg="hector_moveit_config" type="gazebo_killer.sh"/> -->
   <arg name="use_ground_truth_for_tf" default="true"/>
   <arg name="headless" default="true"/>
-  <arg name="use_gui" default="false"/>
+  <arg name="use_gui" default="true"/>
   <arg name="debug" default="false" />
 
   <!-- The name of the parameter under which the URDF is loaded -->
@@ -36,7 +36,7 @@
     <param name="publish_frequency" type="double" value="50.0" />
   </node>  
 
-  <node pkg="tf" type="static_transform_publisher" name="world_2_odom" args="$0 0 0 0 0 0 odom world 100" />
+  <node pkg="tf" type="static_transform_publisher" name="odom_2_world" args="$0 0 0 0 0 0 odom world 100" />
 
 
   <!--include file="$(find hector_moveit_config)/launch/move_group.launch"-->

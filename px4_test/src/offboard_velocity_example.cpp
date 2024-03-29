@@ -43,7 +43,10 @@ int main(int argc, char **argv)
             ("mavros/setpoint_position/local", 10);
 
     ros::Publisher cmd_vel_pub = nh.advertise<geometry_msgs::Twist>
-        ("mavros/setpoint_velocity/cmd_vel_unstamped", 10);
+        ("mavros/setpoint_velocity/cmd_vel_unstamped", 10); 
+
+    ros::Publisher cmd_vel_pub_stmpd = nh.advertise<geometry_msgs::TwistStamped>
+        ("mavros/setpoint_velocity/cmd_vel", 10);
     //---------END OF PUBLISHERS-----------
 
 
@@ -75,13 +78,42 @@ int main(int argc, char **argv)
     }
 
 
+    // Stablish the cmd_vel frame
+    mavros_msgs::SetMavFrame set_frame_msg;
+    set_frame_msg.request.mav_frame = set_frame_msg.request.FRAME_BODY_NED;
+    set_cmd_vel_frame.call(set_frame_msg);
+
+    geometry_msgs::TwistStamped cmd_vel_zero;
+    cmd_vel_zero.twist.linear.x = 0;
+    cmd_vel_zero.twist.linear.y = 0;
+    cmd_vel_zero.twist.linear.z = 0;
+    cmd_vel_zero.twist.angular.x = 0;
+    cmd_vel_zero.twist.angular.y = 0;
+    cmd_vel_zero.twist.angular.z = 0;
+
+    cmd_vel_zero.header.frame_id = "odom";
+
+    
+    geometry_msgs::TwistStamped cmd_vel_stmpd;
+    cmd_vel_stmpd.twist.linear.x = 0.25;
+    cmd_vel_stmpd.twist.linear.y = 0;
+    cmd_vel_stmpd.twist.linear.z = 0;
+    cmd_vel_stmpd.twist.angular.x = 0;
+    cmd_vel_stmpd.twist.angular.y = 0;
+    cmd_vel_stmpd.twist.angular.z = 0.3;
+
+    cmd_vel_stmpd.header.frame_id = "odom";
+
+    /*
     geometry_msgs::Twist cmd_vel;
-    cmd_vel.linear.x = 0.1;
+    cmd_vel.linear.x = 0.05;
     cmd_vel.linear.y = 0;
     cmd_vel.linear.z = 0;
     cmd_vel.angular.x = 0;
     cmd_vel.angular.y = 0;
-    cmd_vel.angular.z = -0.1; //5.0/180 * M_PI;
+    cmd_vel.angular.z = 0.3; //5.0/180 * M_PI;
+    */
+    
     
     
     //------------SEND INITIAL 100 POINTS TO CHANGE TO OFFBOARD------------------
@@ -90,7 +122,7 @@ int main(int argc, char **argv)
     for(int i = 100; ros::ok() && i > 0; --i){
         
         //Publish CMD_POS
-        cmd_vel_pub.publish(cmd_vel);
+        cmd_vel_pub.publish(cmd_vel_zero);
         ros::spinOnce();
         rate.sleep();
     }
@@ -102,6 +134,7 @@ int main(int argc, char **argv)
     //REQUEST OFFBOARD FLIGHT MODE
     mavros_msgs::SetMode offb_set_mode;
     offb_set_mode.request.custom_mode = "OFFBOARD";
+    
 
     //REQUEST ARM DRONE
     mavros_msgs::CommandBool arm_cmd;
@@ -135,7 +168,8 @@ int main(int argc, char **argv)
 
     std::cout << "Pulbishing Velocity... \n";
     while(ros::ok()){
-        cmd_vel_pub.publish(cmd_vel);
+        //cmd_vel_pub.publish(cmd_vel);
+        cmd_vel_pub_stmpd.publish(cmd_vel_stmpd);
         ros::spinOnce();
         rate.sleep();
     }

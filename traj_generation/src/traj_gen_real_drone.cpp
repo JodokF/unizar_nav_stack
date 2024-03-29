@@ -234,7 +234,6 @@ bool poly_traj_plan::generate_trajectory() {
     const double v_max = vel_threshold; 
     const double a_max = vel_threshold;
     segment_times = estimateSegmentTimes(vertices, v_max, a_max);
-    std::cout << "Segment times = " << segment_times.size() << std::endl;
     
     // Solve the optimization problem
     const int N = 10; //Degree of the polynomial, even number at least two times the highest derivative
@@ -247,15 +246,19 @@ bool poly_traj_plan::generate_trajectory() {
     opt.getTrajectory(&trajectory);
 
     //Sample the trajectory (to obtain positions, velocities, etc.)
-    sampling_interval = 0.1; //How much time between intermediate points
+    sampling_interval = 0.05; //How much time between intermediate points
     bool success = mav_trajectory_generation::sampleWholeTrajectory(trajectory, sampling_interval, &traj_states);
 
 //  ************** DEBUG PRINTS AND MARKERS **************
 
     // Example to access the data
-    std::cout << "Trajectory time = " << trajectory.getMaxTime() << std::endl;
+    std::cout << "---\n";
+    std::cout << "Trajectory time Max = " << trajectory.getMaxTime() << std::endl;
+    std::cout << "Trajectory time Min = " << trajectory.getMaxTime() << std::endl;
     std::cout << "Number of states = " << traj_states.size() << std::endl;
+    std::cout << "Estimated Segment times = " << segment_times.size() << std::endl;
     std::cout << "Sampling intervall = " << sampling_interval << std::endl;
+    std::cout << "---\n\n";
     //std::cout << "Position (world frame) at stamp " << 25 << ", x = " << traj_states[25].position_W.x() << std::endl;
     //std::cout << "Velocity (world frame) at stamp " << 25 << ", x = " << traj_states[25].velocity_W.x() << std::endl;
 

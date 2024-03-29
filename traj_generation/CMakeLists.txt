@@ -14,7 +14,6 @@ find_package(catkin REQUIRED COMPONENTS
     
 )
 
-
 catkin_package(
                 CATKIN_DEPENDS 
                 roscpp 
@@ -25,7 +24,6 @@ catkin_package(
                 
 )
 
-
 # Add include directories
 include_directories(
     include
@@ -33,7 +31,6 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include   # Add this line to include the directory containing traj_gen.h
     # Add any other include directories here
 )
-
 
 add_executable(traj_generation_sim src/traj_gen_sim.cpp)
 add_dependencies(traj_generation_sim ${catkin_EXPORTED_TARGETS})
