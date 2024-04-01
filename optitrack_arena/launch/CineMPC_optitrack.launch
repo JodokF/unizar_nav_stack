@@ -31,6 +31,7 @@
   <node pkg="optitrack_arena" type="optitrack_pose_tf" name="optitrack_pose_tf" output="screen"/>
   <remap from="/mavros/vision_pose/pose" to="/ned_pose" />
   <!-- TF map <=> odom -->
+  
   <node pkg="tf" type="static_transform_publisher" name="broadcaster_odom" args="$0 0 0 0 0 0 map odom 100" />
 
   <node pkg="tf" type="static_transform_publisher" name="odom_ned" args="$0 0 0 0 0 0 odom odom_ned 100" />
