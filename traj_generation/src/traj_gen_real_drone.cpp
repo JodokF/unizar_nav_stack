@@ -4,13 +4,10 @@
 
 poly_traj_plan::poly_traj_plan(ros::NodeHandle& nh){    
 
-    //default_odom_topic = "/ground_truth/state";
-    //default_odom_topic = "/vrpn_client_node/cine_mpc/pose";
-    default_odom_topic = "/optitrack/pose"; // = cine_mpc drone pose (when the correct launch file is executed)
-    default_goal_topic = "/vrpn_client_node/goal_optitrack/pose";
+    odom_topic = "/mavros/vision_pose/pose";
+    //odom_topic = "/optitrack/pose"; // = cine_mpc drone pose (when the optitrack launch file is executed)
+    //goal_topic = "/vrpn_client_node/goal_optitrack/pose";
 
-    nh.param("/odom_topic", odom_topic, default_odom_topic);
-    nh.param("/goal_topic", goal_topic, default_goal_topic);
     nh.param("/planner_service", planner_service, std::string("/voxblox_rrt_planner/plan"));
 
 
@@ -22,9 +19,13 @@ poly_traj_plan::poly_traj_plan(ros::NodeHandle& nh){
     sampling_interval = 0.1;
     vel_threshold = 0.3;
 
-    //odom_sub = nh.subscribe<nav_msgs::Odometry>(odom_topic, 10, &poly_traj_plan::poseCallback, this);
+    // for the simulation: (instead of the optitrack goal)
+        goal.pose.position.x = -1.8; 
+        goal.pose.position.y = -0.8; 
+        goal.pose.position.z =  0.8; 
+
     vel_pub = nh.advertise<geometry_msgs::Twist>
-                ("/cmd_vel_control",10);
+                ("/vel_cmd_2_drone",10);
     vel_pub_2_real_drone = nh.advertise<geometry_msgs::Twist>
                 ("/vel2real_drone",10);
     pose_pub = nh.advertise<geometry_msgs::PoseStamped>
@@ -37,7 +38,6 @@ poly_traj_plan::poly_traj_plan(ros::NodeHandle& nh){
                 (odom_topic,10,&poly_traj_plan::poseCallback,this);
     goal_sub = nh.subscribe<geometry_msgs::PoseStamped>
                 (goal_topic,10,&poly_traj_plan::goalCallback,this);
-    //plan_sub = nh.subscribe<geometry_msgs::PoseArray>("/rrt_planner/path",1,&poly_traj_plan::planCallback,this);
     plan_sub = nh.subscribe<geometry_msgs::PoseArray>
                 ("/waypoint_list",10,&poly_traj_plan::planCallback,this);
     path_plan_client = nh.serviceClient<std_srvs::Empty>
@@ -51,56 +51,8 @@ poly_traj_plan::poly_traj_plan(ros::NodeHandle& nh){
     planner_service_called = false;
 }
 
-real_drone_connection::real_drone_connection(ros::NodeHandle& nh){
-    
-    real_vel_pub = nh.advertise<geometry_msgs::Twist>
-            ("/mavros/setpoint_velocity/cmd_vel_unstamped", 10);
-
-    planned_vel_sub = nh.subscribe<geometry_msgs::Twist>
-            ("/vel2real_drone", 10, &real_drone_connection::vel_cb, this);
-
-    current_pose_sub = nh.subscribe<geometry_msgs::PoseStamped>
-            ("/optitrack/pose",10, &real_drone_connection::pose_cb, this);
-
-    state_sub = nh.subscribe<mavros_msgs::State>
-            ("/mavros/state", 10, &real_drone_connection::state_cb, this);
-    
-    arming_client = nh.serviceClient<mavros_msgs::CommandBool>
-            ("/mavros/cmd/arming");
-
-    set_cmd_vel_frame = nh.serviceClient<mavros_msgs::SetMavFrame>
-            ("/mavros/setpoint_velocity/mav_frame");
-
-    set_mode_client = nh.serviceClient<mavros_msgs::SetMode>
-            ("/mavros/set_mode");
-
-    // ros::Publisher cmd_vel_pub = nh.advertise<geometry_msgs::TwistStamped>
-    //         ("mavros/setpoint_velocity/cmd_vel", 10);
-
-    cmd_vel.linear.x = 0;
-    cmd_vel.linear.y = 0;
-    cmd_vel.linear.z = 0;
-    cmd_vel.angular.x = 0;
-    cmd_vel.angular.y = 0;
-    cmd_vel.angular.z = 0; 
-
-
-}
-
 /******************** Functions ******************/
 
-void real_drone_connection::state_cb(const mavros_msgs::State::ConstPtr& msg){
-    current_state = *msg;
-    // std::cout << "--- Curr. State: " << current_state.mode << "\n";
-}
-
-void real_drone_connection::pose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg){
-    current_pose = *msg;
-}
-
-void real_drone_connection::vel_cb(const geometry_msgs::Twist::ConstPtr& msg){
-    planned_vel = *msg;
-}
 
 void poly_traj_plan::planCallback(const geometry_msgs::PoseArray::ConstPtr& msg){
     
@@ -389,46 +341,9 @@ double poly_traj_plan::goalDistance(geometry_msgs::Pose pose, geometry_msgs::Poi
     return euc_dis;
 }
 
-int poly_traj_plan::takeoff(){
-
-    motor_enable_service_msg.request.enable = true;
-    motor_enable_service.call(motor_enable_service_msg);
-
-    while(!odom_received) // waiting for odom
-    {
-        ros::Duration(0.25).sleep(); // safety first
-    }
-
-    vel_msg.linear.z = 0.5;
-    while(odom_info.pose.position.z < takeoff_altitude) // drone velocity in 'z' is set to 0.5 until takeoff_altitude is reached
-    {
-        std::cout << "Z - Pos drone:" << odom_info.pose.position.z << std::endl;
-        vel_pub.publish(vel_msg);
-        ros::Duration(0.25).sleep();
-    }        
-    vel_msg.linear.z = 0.0;
-    vel_pub.publish(vel_msg);
-
-    geometry_msgs::PoseStamped standStill;
-    standStill.pose.position.x = odom_info.pose.position.x;
-    standStill.pose.position.y = odom_info.pose.position.y;
-    standStill.pose.position.z = odom_info.pose.position.z;
-    standStill.header.frame_id = "world";
-
-    // publish a few times to reach gazebo (only ome time didn't work)
-    for(int i = 0; i < 5; i++){
-        pose_pub.publish(standStill);
-        ros::Duration(0.05).sleep();
-    }
-
-    return 1;
-}
-
 int poly_traj_plan::run_navigation_node(){
 
     ROS_INFO("Navigation Node Starts");
-
-    ros::Rate rate(10);
 
     int while_loop_ctrl = 0;
     while(odom_received == false || goal_recieved == false ){
@@ -453,11 +368,11 @@ int poly_traj_plan::run_navigation_node(){
     // start_pose is assigened in the odom callback
     request.request.start_pose.pose.position.x = odom_info.pose.position.x;
     request.request.start_pose.pose.position.y = odom_info.pose.position.y;
-    request.request.start_pose.pose.position.z = odom_info.pose.position.z; // 1.2;
+    request.request.start_pose.pose.position.z = odom_info.pose.position.z; 
 
     request.request.goal_pose.pose.position.x = goal.pose.position.x;
     request.request.goal_pose.pose.position.y = goal.pose.position.y;
-    request.request.goal_pose.pose.position.z = 1.2; // goal.pose.position.z;
+    request.request.goal_pose.pose.position.z = goal.pose.position.z;
 
     // requesting voxblox-rrt-planner to plan:
     try {
@@ -493,129 +408,31 @@ int poly_traj_plan::run_navigation_node(){
 
 }
 
-int real_drone_connection::establish_drone_connection(){
+void poly_traj_plan::send_vel_commands() {
     
-    ROS_INFO("Trying to establishe connection to the Drone.");
-    //tf2_ros::Buffer tf_buffer_;
-    //tf2_ros::TransformListener tf_listener_(tf_buffer_, nh);
+    if(curr_state <= traj_states.size()){ 
+        vel_msg.linear.x = traj_states[curr_state].velocity_W.x();
+        vel_msg.linear.y = traj_states[curr_state].velocity_W.y();
+        vel_msg.linear.z = traj_states[curr_state].velocity_W.z();
+        vel_msg.angular.x = traj_states[curr_state].angular_velocity_W.x();
+        vel_msg.angular.y = traj_states[curr_state].angular_velocity_W.y();
+        vel_msg.angular.z = traj_states[curr_state].angular_velocity_W.z();
 
-    //the setpoint publishing rate MUST be faster than 2Hz
-    ros::Rate rate(20.0);
+        // Publish the command
+        vel_pub.publish(vel_msg);
 
-    // wait for FCU connection
-    int msg_int = 0;
-    while(ros::ok() && !current_state.connected){
-        msg_int++;
-        if (msg_int % 20 == 0) std::cout << "Waiting for connection to MavRos\n";
-        ros::spinOnce();
-        rate.sleep();
-        if (msg_int == 200) return -1;
+    }else{
+        vel_msg.linear.x = 0.0;
+        vel_msg.linear.y = 0.0;
+        vel_msg.linear.z = 0.0;
+        vel_msg.angular.x = 0.0;
+        vel_msg.angular.y = 0.0;
+        vel_msg.angular.z = 0.0;
+        
+        vel_pub.publish(vel_msg);
+        
     }
-
-
-    //Stablish the cmd_vel frame
-    mavros_msgs::SetMavFrame set_frame_msg;
-    set_frame_msg.request.mav_frame = set_frame_msg.request.FRAME_BODY_NED;
-    set_cmd_vel_frame.call(set_frame_msg);
-
-    //send a few setpoints before starting
-    for(int i = 100; ros::ok() && i > 0; --i){
-        real_vel_pub.publish(cmd_vel); // cmd_vel = 0 velocity
-        ros::spinOnce();
-        rate.sleep();
-    }
-
-    // --------ARMING AND OFFBOARD --------------
-    //REQUEST OFFBOARD FLIGHT MODE
-    mavros_msgs::SetMode offb_set_mode;
-    offb_set_mode.request.custom_mode = "OFFBOARD";
-
-    //REQUEST ARM DRONE
-    mavros_msgs::CommandBool arm_cmd;
-    arm_cmd.request.value = true;
-    
-    //LOOP UNTIL POSITION AND ARMED
-    ros::Rate wait_rate(1.0);
-
-    msg_int = 0;
-    std::cout << "Arm manually and enable position mode before going offboard.\n";
-    while(ros::ok() && !current_state.armed && current_state.mode != "POSITION"){
-        if (msg_int % 4 == 0)  std::cout << "Arm manually and enable position mode before going offboard.\n";
-        msg_int++;
-        ros::spinOnce();
-        wait_rate.sleep();
-        if (msg_int == 180) return -1;
-    }
-    
-    bool offboard = false;
-
-    //LOOP UNTIL OFFBOARD
-    msg_int = 0;
-    do{
-        if(msg_int % 20 == 0) ROS_INFO("Trying to go offboard");
-        //Pass offboard
-        offb_set_mode.request.custom_mode = "OFFBOARD";
-
-        if(set_mode_client.call(offb_set_mode) && offb_set_mode.response.mode_sent){
-            ROS_INFO("Offboard enabled");
-            offboard = true;
-        }else{
-            if(!current_state.armed){
-                if(msg_int % 20 == 0) ROS_INFO("NOT ARMED, ARM FIRST");
-            }
-        }
-        msg_int++;
-    }while(ros::ok() && !offboard);
-    // --------END OF ARMING AND OFFBOARD --------------
-
-    return 0;
-
-}
-
-//bool real_drone_connection::send_vel_commands(  const mav_msgs::EigenTrajectoryPoint& traj_state, 
-//                                                double threshold){
-bool real_drone_connection::send_vel_commands(){
-    
-    // double threshold = threshold_from_trajectory;
-    bool vel_checker = false;
-/*
-    if (traj_state.velocity_W.x()         < threshold &&
-        traj_state.velocity_W.y()         < threshold &&
-        traj_state.velocity_W.z()         < threshold &&
-        traj_state.angular_velocity_W.x() < threshold &&
-        traj_state.angular_velocity_W.y() < threshold &&
-        traj_state.angular_velocity_W.z() < threshold)
-        {   vel_checker = true;
-            
-    } else {
-            ROS_ERROR("Velocity too high");
-            return false;
-    }
-
-    // if(vel_checker == true){ 
-    if(true){ //debugging
-        vel_msg.linear.x = traj_state.velocity_W.x();
-        vel_msg.linear.y = traj_state.velocity_W.y();
-        vel_msg.linear.z = traj_state.velocity_W.z();
-        vel_msg.angular.x = traj_state.angular_velocity_W.x();
-        vel_msg.angular.y = traj_state.angular_velocity_W.y();
-        vel_msg.angular.z = traj_state.angular_velocity_W.z();
-*/
-            
-    geometry_msgs::Twist cmd_vel_debug;
-    cmd_vel_debug.linear.x = 0.1;
-    cmd_vel_debug.linear.y = 0;
-    cmd_vel_debug.linear.z = 0;
-    cmd_vel_debug.angular.x = 0;
-    cmd_vel_debug.angular.y = 0;
-    cmd_vel_debug.angular.z = 0; //5.0/180 * M_PI;
-
-    // Publish the command
-    real_vel_pub.publish(cmd_vel_debug);
-    std::cout << "--- \nVelocities: \n" << cmd_vel_debug << "\n";
-    //}
-    return true;
-
+        curr_state++;
 }
 
 
@@ -630,12 +447,6 @@ int main(int argc, char** argv){
     poly_traj_plan ptp(std::ref(node_handle));
     int current_traj_state = 0;
 
-    // TODO: Arming and Takeoff from code:
-    // if (ptp.takeoff() == 1) ROS_INFO("Take-off succesfull");
-
-    real_drone_connection drone(std::ref(node_handle));
-    
-    
     // run the navigation node and get the trajectory    
     std::cout << ("\n\n---\n\n");
     int nav_func_checker = ptp.run_navigation_node();
@@ -667,42 +478,11 @@ int main(int argc, char** argv){
 
     
 
-    // setting up the real drone
-    if (drone.establish_drone_connection() != 0) {
-        ROS_ERROR("Drone connection not possible.");
-        return -1;
-    }
-    else ROS_INFO("Drone connection established.");
-
-
-    ros::Rate rate(20.0);
-    while(ros::ok()){
-
-        drone.send_vel_commands();
-        ros::spinOnce();
-        rate.sleep();
-    }
-
-
-
-
-/*
     // sending vel commands to the real drone
-    while(ros::ok() && current_traj_state < ptp.traj_states.size()){
-
-        if (current_traj_state < ptp.traj_states.size()){
-            // vel_threashold to avoid to high velocities
-            drone.send_vel_commands(ptp.traj_states.at(current_traj_state), ptp.vel_threshold);
-        }
-        // debug output:
-        // if (current_traj_state % 5 == 0) std::cout << "Velocitie published! \n";
-    
-        current_traj_state++;
-        // sampling_interval comes from the trajectory generation
+    while(ros::ok()){
+        ptp.send_vel_commands();
         ros::Duration(ptp.sampling_interval).sleep();
     }
-*/
-
 
 
     return 0;

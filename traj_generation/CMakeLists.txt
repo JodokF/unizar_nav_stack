@@ -39,3 +39,8 @@ target_link_libraries(traj_generation_sim ${catkin_LIBRARIES})# Eigen3::Eigen)
 add_executable(traj_generation_real_drone src/traj_gen_real_drone.cpp)
 add_dependencies(traj_generation_real_drone ${catkin_EXPORTED_TARGETS})
 target_link_libraries(traj_generation_real_drone ${catkin_LIBRARIES})# Eigen3::Eigen)
+
+
+add_executable(drone_connection src/drone_connection.cpp)
+# add_dependencies(drone_connection ${catkin_EXPORTED_TARGETS})
+target_link_libraries(drone_connection ${catkin_LIBRARIES})# Eigen3::Eigen)

@@ -156,8 +156,7 @@ int main(int argc, char **argv)
     while(ros::ok())
     {
         cmd_vel_unstamped_pub.publish(cmd_vel_unstamped);
-
-                                                
+                               
         ros::spinOnce();
         rate.sleep();
 

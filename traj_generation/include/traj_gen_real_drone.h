@@ -94,37 +94,5 @@ class poly_traj_plan{
 
 }; 
 
-class real_drone_connection{
-    private:
-        ros::Subscriber current_pose_sub, planned_vel_sub, state_sub;
-        ros::Publisher real_vel_pub;
-        ros::ServiceClient arming_client, set_cmd_vel_frame, set_mode_client;
-
-        geometry_msgs::Twist vel_msg;
-
-        
-        void state_cb(const mavros_msgs::State::ConstPtr& msg);
-
-        void pose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg);
-
-        void vel_cb(const geometry_msgs::Twist::ConstPtr& msg);
-        
-
-
-    public:
-
-    real_drone_connection(ros::NodeHandle& nh);
-    int establish_drone_connection();
-    //bool send_vel_commands(const mav_msgs::EigenTrajectoryPoint&, double);
-    bool send_vel_commands();
-    geometry_msgs::PoseStamped current_pose;
-    mavros_msgs::State current_state;
-    geometry_msgs::Twist planned_vel;
-    geometry_msgs::Twist cmd_vel;
-
-
-
-
-};
 
 

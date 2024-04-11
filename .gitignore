@@ -4,7 +4,8 @@
 # hector_models/
 hector_quadrotor/
 # optitrack_arena/
-px4_sim
+# px4_sim
+px4_sim/PX4-Autopilot
 # px4_test/
 rotors_description/
 # traj_generation/
