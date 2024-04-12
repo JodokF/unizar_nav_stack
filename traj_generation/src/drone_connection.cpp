@@ -26,7 +26,7 @@ class drone_connection
         ros::Subscriber pose_sub;
         ros::ServiceClient set_cmd_vel_frame;
         
-        geometry_msgs::PoseStamped start_pose;
+        geometry_msgs::PoseStamped start_pose, take_off_alti_pose;
         geometry_msgs::Twist cmd_vel_zero;
 
         mavros_msgs::SetMavFrame set_frame_msg;
@@ -36,6 +36,9 @@ class drone_connection
         mavros_msgs::State current_state;
         nav_msgs::Odometry curr_pose;
         geometry_msgs::Twist vel_cmd_import;
+        ros::Time ros_time_last;
+
+        bool hight_check, start_pose_checker;
 
     public:
         bool vel_break;
@@ -63,6 +66,15 @@ drone_connection::drone_connection(ros::NodeHandle& nh)
     set_cmd_vel_frame = nh.serviceClient<mavros_msgs::SetMavFrame>
         ("/mavros/setpoint_velocity/mav_frame");
 
+    
+    take_off_alti_pose.pose.position.x = 0;
+    take_off_alti_pose.pose.position.y = 0;
+    take_off_alti_pose.pose.position.z = 1;
+    take_off_alti_pose.pose.orientation.x = 0;
+    take_off_alti_pose.pose.orientation.y = 0;
+    take_off_alti_pose.pose.orientation.z = 0; 
+    take_off_alti_pose.pose.orientation.w = 0;
+    
     start_pose.pose.position.x = -1;
     start_pose.pose.position.y = 2;
     start_pose.pose.position.z = 1.2;
@@ -80,12 +92,13 @@ drone_connection::drone_connection(ros::NodeHandle& nh)
 
     vel_break = false;
 
+    ros_time_last = ros::Time::now(); 
+
 }
 
 drone_connection::~drone_connection()
 {
 }
-
 
 void drone_connection::state_cb(const mavros_msgs::State::ConstPtr& msg){
     current_state = *msg;
@@ -97,7 +110,13 @@ void drone_connection::pose_cb(const nav_msgs::Odometry::ConstPtr& msg){
 
 void drone_connection::vel_cmd_cb(const geometry_msgs::Twist::ConstPtr& msg){
     //vel_cmd_import = *msg;
-    // vel_break = true;
+    
+    std::cout << std::fixed << std::showpoint;
+    std::cout << std::setprecision(3);
+    std::cout << "Publ. time: " << ros::Time::now() - ros_time_last << " - ";
+    ros_time_last = ros::Time::now(); 
+
+    vel_break = true;
     cmd_vel_unstmpd_pub.publish(*msg);
     
 }
@@ -105,13 +124,13 @@ void drone_connection::vel_cmd_cb(const geometry_msgs::Twist::ConstPtr& msg){
 int drone_connection::take_off()
 {
     //the setpoint publishing rate MUST be faster than 2Hz
-    ros::Rate rate100(100.0);
+    ros::Rate rate50(50.0);
 
     // wait for FCU connection
     while(ros::ok() && !current_state.connected){
 
         ros::spinOnce();
-        rate100.sleep();
+        rate50.sleep();
     }
 
     //Stablish the cmd_vel frame
@@ -124,15 +143,17 @@ int drone_connection::take_off()
 
     //send a few setpoints before starting to establish the offboard connection
     for(int i = 50; ros::ok() && i > 0; --i){
-        local_pos_pub.publish(start_pose);
+        local_pos_pub.publish(take_off_alti_pose);
         ros::spinOnce();
-        rate100.sleep();
+        rate50.sleep();
     }
 
     ros::Time last_request = ros::Time::now();
 
     int cntr = 0;
-    bool hight_check = false;
+    int wait_time = 150;
+    hight_check = false;
+    start_pose_checker = false;
     while(ros::ok()){
         if( current_state.mode != "OFFBOARD" &&
             (ros::Time::now() - last_request > ros::Duration(5.0))){
@@ -152,15 +173,26 @@ int drone_connection::take_off()
             }
         }
 
-        local_pos_pub.publish(start_pose);
-        if(vel_sub.getNumPublishers() > 0 || vel_break == true){
+        
+        if(curr_pose.pose.pose.position.z >= take_off_alti_pose.pose.position.z - 0.05) hight_check = true;
+        if(hight_check == true) cntr++;
+        if(cntr == wait_time) {
+            start_pose_checker = true; 
+            std::cout << "Take Off hight reached.\n";
+        }
+        
+        if (start_pose_checker == false) local_pos_pub.publish(take_off_alti_pose);
+        if (start_pose_checker == true) local_pos_pub.publish(start_pose);
+
+        if(vel_sub.getNumPublishers() > 0 && vel_break == true){
             ROS_INFO("Traj. vel. publisher detected.");
             return 0;
         }
         
         ros::spinOnce();
-        rate100.sleep();
+        rate50.sleep();
     }
+    return 0;
 }
 
 
@@ -177,7 +209,7 @@ int main(int argc, char **argv)
 
     ros::Rate rate1(1);
 
-    std::cout << "Publishing velocitiess now...\n";
+    ROS_INFO("Publishing velocitiess now...");
     while(ros::ok())
     {                               
         //ros::spinOnce();

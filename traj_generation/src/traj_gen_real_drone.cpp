@@ -16,18 +16,16 @@ poly_traj_plan::poly_traj_plan(ros::NodeHandle& nh){
     curr_state = 0;
     waypoint_cntr = 0;
     marker_cntr = 0;
-    sampling_interval = 0.1;
+    sampling_interval = 0.05;
     vel_threshold = 0.3;
 
     // for the simulation: (instead of the optitrack goal)
-        goal.pose.position.x = -1.8; 
-        goal.pose.position.y = -0.8; 
-        goal.pose.position.z =  0.8; 
+        goal.pose.position.x = 2; 
+        goal.pose.position.y = -1; 
+        goal.pose.position.z = 0.75; 
 
     vel_pub = nh.advertise<geometry_msgs::Twist>
                 ("/vel_cmd_2_drone",10);
-    vel_pub_2_real_drone = nh.advertise<geometry_msgs::Twist>
-                ("/vel2real_drone",10);
     pose_pub = nh.advertise<geometry_msgs::PoseStamped>
                 ("/command/pose", 10);
     mav_traj_markers_pub = nh.advertise<visualization_msgs::MarkerArray>
@@ -83,15 +81,6 @@ void poly_traj_plan::poseCallback(const geometry_msgs::PoseStamped::ConstPtr &ms
     
 }
 
-double poly_traj_plan::get_yaw_from_quat(const geometry_msgs::Quaternion q){
-    double roll, pitch, yaw;
-    tf2::Quaternion quat_tf;
-    tf2::fromMsg(q, quat_tf);
-    tf2::Matrix3x3(quat_tf).getRPY(roll, pitch, yaw);
-    return yaw;
-
-}
-
 geometry_msgs::Pose poly_traj_plan::calculateMidpoint(const geometry_msgs::Pose& pose1, const geometry_msgs::Pose& pose2) {
     geometry_msgs::Pose midpoint;
 
@@ -100,127 +89,6 @@ geometry_msgs::Pose poly_traj_plan::calculateMidpoint(const geometry_msgs::Pose&
     midpoint.position.z = (pose1.position.z + pose2.position.z) / 2;
 
     return midpoint;
-}
-
-bool poly_traj_plan::generate_trajectory() {
-
-    //constants
-    const int dimension = 3; //we only compute the trajectory in x, y and z
-    const int derivative_to_optimize = mav_trajectory_generation::derivative_order::SNAP; //POSITION, VELOCITY, ACCELERATION, JERK, SNAP
-
-    // Definition of the trajectory beginning, end and intermediate constraints
-    mav_trajectory_generation::Vertex start(dimension), middle_points(dimension), end(dimension);
-
-        // make start point: 
-    start.makeStartOrEnd(Eigen::Vector3d(odom_info.pose.position.x,odom_info.pose.position.y,0.8), derivative_to_optimize);
-
-    std::cout << "\n---\n";
-    std::cout << "Start x, y, z: \t"    << odom_info.pose.position.x << ", " 
-                                        << odom_info.pose.position.y << ", " 
-                                        << odom_info.pose.position.z << std::endl;
-    vertices.push_back(start);
-
-
-    //drawMarkerArray(vxblx_waypoints, 2, 1);
-
-    // insert points between each waypoint to get a stricter trajectory:
-    
-    for (size_t i = 0; i < vxblx_waypoints.poses.size() - 1; ++i) {
-        // Calculate the midpoint between the current pose and the next pose
-        geometry_msgs::Pose midpoint = calculateMidpoint(vxblx_waypoints.poses[i], vxblx_waypoints.poses[i + 1]);
-
-        // Insert the midpoint pose between the current and next pose
-        vxblx_waypoints.poses.insert(vxblx_waypoints.poses.begin() + i + 1, midpoint);
-
-        // Increment the index to account for the newly inserted midpoint pose
-        ++i;
-    }
-    
-
-    // delete the first and last entry of the recived trajectory waypoints 
-    // becaue they are already considered in start and goal vertices
-    vxblx_waypoints.poses.erase(vxblx_waypoints.poses.begin());
-    vxblx_waypoints.poses.erase(vxblx_waypoints.poses.end() - 1);
-
-    drawMarkerArray(vxblx_waypoints, 1, 0);
-
-        
-    for (const auto& waypoint : vxblx_waypoints.poses) {
-
-        mav_trajectory_generation::Vertex middle_points(dimension);
-        
-        // Extract the position from the waypoints
-        Eigen::Vector3d wp_pos_eigen(
-            waypoint.position.x,
-            waypoint.position.y,
-            waypoint.position.z
-        );
-                
-        std::cout << waypoint_cntr << ". Waypoint x, y, z: \t" 
-                  << waypoint.position.x << ", "
-                  << waypoint.position.y << ", " 
-                  << waypoint.position.z << std::endl;
-        waypoint_cntr++;
-
-        // Add the position constraint for the waypoint
-        middle_points.addConstraint(mav_trajectory_generation::derivative_order::POSITION, wp_pos_eigen);
-        
-        // Add the vertex to the trajectory vertices
-        vertices.push_back(middle_points);
-
-    }
-
-    // make end point, z + 1 meter: 
-    end.makeStartOrEnd(Eigen::Vector3d(goal.pose.position.x,goal.pose.position.y,goal.pose.position.z + 1), derivative_to_optimize);
-    vertices.push_back(end);
-    std::cout << "Goal x, y, z: \t" << goal.pose.position.x << ", " 
-                                    << goal.pose.position.y << ", " 
-                                    << goal.pose.position.z + 1 << std::endl;
-    std::cout << "\n---\n";
-
-    
-    // TODO understand this:
-    // Provide the time constraints on the vertices
-    //Automatic time computation 
-    std::vector<double> segment_times;
-    const double v_max = vel_threshold; 
-    const double a_max = vel_threshold;
-    segment_times = estimateSegmentTimes(vertices, v_max, a_max);
-    
-    // Solve the optimization problem
-    const int N = 10; //Degree of the polynomial, even number at least two times the highest derivative
-    mav_trajectory_generation::PolynomialOptimization<N> opt(dimension);
-    opt.setupFromVertices(vertices, segment_times, derivative_to_optimize);
-    opt.solveLinear();
-
-    //Obtain the trajectory
-    trajectory.clear();
-    opt.getTrajectory(&trajectory);
-
-    //Sample the trajectory (to obtain positions, velocities, etc.)
-    sampling_interval = 0.05; //How much time between intermediate points
-    bool success = mav_trajectory_generation::sampleWholeTrajectory(trajectory, sampling_interval, &traj_states);
-
-//  ************** DEBUG PRINTS AND MARKERS **************
-
-    // Example to access the data
-    std::cout << "---\n";
-    std::cout << "Trajectory time Max = " << trajectory.getMaxTime() << std::endl;
-    std::cout << "Trajectory time Min = " << trajectory.getMaxTime() << std::endl;
-    std::cout << "Number of states = " << traj_states.size() << std::endl;
-    std::cout << "Estimated Segment times = " << segment_times.size() << std::endl;
-    std::cout << "Sampling intervall = " << sampling_interval << std::endl;
-    std::cout << "---\n\n";
-    //std::cout << "Position (world frame) at stamp " << 25 << ", x = " << traj_states[25].position_W.x() << std::endl;
-    //std::cout << "Velocity (world frame) at stamp " << 25 << ", x = " << traj_states[25].velocity_W.x() << std::endl;
-
-    //AROB visualization
-    drawMAVTrajectoryMarkers();
-
-//  ************** DEBUG PRINTS AND MARKERS **************
-
-    return success;
-
 }
 
 void poly_traj_plan::drawMarkerArray(geometry_msgs::PoseArray waypoints, int color, int offset){
@@ -302,8 +170,7 @@ void poly_traj_plan::drawMAVTrajectoryMarkers(){
     int derivative_order = mav_trajectory_generation::derivative_order::POSITION;
     double sampling_time = 0.1;
     mav_msgs::EigenTrajectoryPoint::Vector states;
-    sampling_interval = 0.1;
-    bool success = mav_trajectory_generation::sampleWholeTrajectory(trajectory, sampling_interval, &states);   
+    bool success = mav_trajectory_generation::sampleWholeTrajectory(trajectory, sampling_interval, &states);   // sampling_time
     int id_marker = 0;
 
     for(int i=0; i< states.size(); i++) {
@@ -335,11 +202,21 @@ void poly_traj_plan::drawMAVTrajectoryMarkers(){
     mav_traj_markers_pub.publish(markers);
 }
 
+/*
 double poly_traj_plan::goalDistance(geometry_msgs::Pose pose, geometry_msgs::Point goal){
     double x_diff = goal.x - pose.position.x, y_diff = goal.y - pose.position.y, z_diff = goal.z - pose.position.z;
     double euc_dis = sqrt(x_diff*x_diff+y_diff*y_diff+z_diff*z_diff);
     return euc_dis;
 }
+
+double poly_traj_plan::get_yaw_from_quat(const geometry_msgs::Quaternion q){
+    double roll, pitch, yaw;
+    tf2::Quaternion quat_tf;
+    tf2::fromMsg(q, quat_tf);
+    tf2::Matrix3x3(quat_tf).getRPY(roll, pitch, yaw);
+    return yaw;
+}
+*/
 
 int poly_traj_plan::run_navigation_node(){
 
@@ -405,6 +282,125 @@ int poly_traj_plan::run_navigation_node(){
     if (generate_trajectory() == true) return 0;
     else return -1;
 
+
+}
+
+bool poly_traj_plan::generate_trajectory() {
+
+    //constants
+    const int dimension = 3; //we only compute the trajectory in x, y and z
+    const int derivative_to_optimize = mav_trajectory_generation::derivative_order::SNAP; //POSITION, VELOCITY, ACCELERATION, JERK, SNAP
+
+    // Definition of the trajectory beginning, end and intermediate constraints
+    mav_trajectory_generation::Vertex start(dimension), middle_points(dimension), end(dimension);
+
+        // make start point: 
+    start.makeStartOrEnd(Eigen::Vector3d(odom_info.pose.position.x,odom_info.pose.position.y,odom_info.pose.position.z), derivative_to_optimize);
+
+    std::cout << "\n---\n";
+    std::cout << "Start x, y, z: \t"    << odom_info.pose.position.x << ", " 
+                                        << odom_info.pose.position.y << ", " 
+                                        << odom_info.pose.position.z << std::endl;
+    vertices.push_back(start);
+
+
+    //drawMarkerArray(vxblx_waypoints, 2, 1);
+
+    // insert points between each waypoint to get a stricter trajectory:
+    for (size_t i = 0; i < vxblx_waypoints.poses.size() - 1; ++i) {
+        // Calculate the midpoint between the current pose and the next pose
+        geometry_msgs::Pose midpoint = calculateMidpoint(vxblx_waypoints.poses[i], vxblx_waypoints.poses[i + 1]);
+
+        // Insert the midpoint pose between the current and next pose
+        vxblx_waypoints.poses.insert(vxblx_waypoints.poses.begin() + i + 1, midpoint);
+
+        // Increment the index to account for the newly inserted midpoint pose
+        ++i;
+    }
+    
+    // delete the first and last entry of the recived trajectory waypoints 
+    // becaue they are already considered in start and goal vertices
+    vxblx_waypoints.poses.erase(vxblx_waypoints.poses.begin());
+    vxblx_waypoints.poses.erase(vxblx_waypoints.poses.end() - 1);
+
+    drawMarkerArray(vxblx_waypoints, 1, 0);
+
+        
+    for (const auto& waypoint : vxblx_waypoints.poses) {
+
+        mav_trajectory_generation::Vertex middle_points(dimension);
+        
+        // Extract the position from the waypoints
+        Eigen::Vector3d wp_pos_eigen(
+            waypoint.position.x,
+            waypoint.position.y,
+            waypoint.position.z
+        );
+                
+        std::cout << waypoint_cntr << ". Waypoint x, y, z: \t" 
+                  << waypoint.position.x << ", "
+                  << waypoint.position.y << ", " 
+                  << waypoint.position.z << std::endl;
+        waypoint_cntr++;
+
+        // Add the position constraint for the waypoint
+        middle_points.addConstraint(mav_trajectory_generation::derivative_order::POSITION, wp_pos_eigen);
+        
+        // Add the vertex to the trajectory vertices
+        vertices.push_back(middle_points);
+
+    }
+
+    // make end point, z + 1 meter: 
+    end.makeStartOrEnd(Eigen::Vector3d(goal.pose.position.x,goal.pose.position.y,goal.pose.position.z), derivative_to_optimize);
+    vertices.push_back(end);
+    std::cout << "Goal x, y, z: \t" << goal.pose.position.x << ", " 
+                                    << goal.pose.position.y << ", " 
+                                    << goal.pose.position.z << std::endl;
+    std::cout << "\n---\n";
+
+    
+    // TODO understand this:
+    // Provide the time constraints on the vertices
+    //Automatic time computation 
+    std::vector<double> segment_times;
+    const double v_max = vel_threshold; 
+    const double a_max = vel_threshold;
+    segment_times = estimateSegmentTimes(vertices, v_max, a_max);
+    
+    // Solve the optimization problem
+    const int N = 10; //Degree of the polynomial, even number at least two times the highest derivative
+    mav_trajectory_generation::PolynomialOptimization<N> opt(dimension);
+    opt.setupFromVertices(vertices, segment_times, derivative_to_optimize);
+    opt.solveLinear();
+
+    //Obtain the trajectory
+    trajectory.clear();
+    opt.getTrajectory(&trajectory);
+
+    //Sample the trajectory (to obtain positions, velocities, etc.)
+    sampling_interval = 0.05; //How much time between intermediate points
+    bool success = mav_trajectory_generation::sampleWholeTrajectory(trajectory, sampling_interval, &traj_states);
+
+//  ************** DEBUG PRINTS AND MARKERS **************
+
+    // Example to access the data
+    std::cout << "---\n";
+    std::cout << "Trajectory time Max = " << trajectory.getMaxTime() << std::endl;
+    std::cout << "Trajectory time Min = " << trajectory.getMaxTime() << std::endl;
+    std::cout << "Number of states = " << traj_states.size() << std::endl;
+    std::cout << "Estimated Segment times = " << segment_times.size() << std::endl;
+    std::cout << "Sampling intervall = " << sampling_interval << std::endl;
+    std::cout << "---\n\n";
+    //std::cout << "Position (world frame) at stamp " << 25 << ", x = " << traj_states[25].position_W.x() << std::endl;
+    //std::cout << "Velocity (world frame) at stamp " << 25 << ", x = " << traj_states[25].velocity_W.x() << std::endl;
+
+    //AROB visualization
+    drawMAVTrajectoryMarkers();
+
+//  ************** DEBUG PRINTS AND MARKERS **************
+
+    return success;
 
 }
 
@@ -475,13 +471,12 @@ int main(int argc, char** argv){
         ROS_ERROR("Invalid input.");
         return 1; // Exit the program with an error code
     }
-
     
-
     // sending vel commands to the real drone
     while(ros::ok()){
         ptp.send_vel_commands();
         ros::Duration(ptp.sampling_interval).sleep();
+        // ros::Duration(0.05).sleep();
     }
 
 

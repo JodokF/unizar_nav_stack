@@ -50,7 +50,7 @@ class poly_traj_plan{
         int nmbr_of_states, curr_state, waypoint_cntr, marker_cntr;
         
         ros::Subscriber plan_sub, pose_sub, goal_sub;
-        ros::Publisher vel_pub, mav_traj_markers_pub, marker_pub, pose_pub, vel_pub_2_real_drone;
+        ros::Publisher vel_pub, mav_traj_markers_pub, marker_pub, pose_pub;
         std::string odom_topic, default_odom_topic, goal_topic, default_goal_topic, planner_service;
 
         mav_trajectory_generation::Trajectory trajectory;
