@@ -27,7 +27,6 @@ class drone_connection
         ros::ServiceClient set_cmd_vel_frame;
         
         geometry_msgs::PoseStamped start_pose, take_off_alti_pose;
-        geometry_msgs::Twist cmd_vel_zero;
 
         mavros_msgs::SetMavFrame set_frame_msg;
         mavros_msgs::SetMode offb_set_mode;
@@ -82,13 +81,7 @@ drone_connection::drone_connection(ros::NodeHandle& nh)
     start_pose.pose.orientation.y = 0;
     start_pose.pose.orientation.z = 0; // 0.383; // = 45 degree in z
     start_pose.pose.orientation.w = 0; //0.924; // = 45 degree in z
-  
-    cmd_vel_zero.linear.x = 0;
-    cmd_vel_zero.linear.y = 0;
-    cmd_vel_zero.linear.z = 0;
-    cmd_vel_zero.angular.x = 0;
-    cmd_vel_zero.angular.y = 0;
-    cmd_vel_zero.angular.z = 0; 
+   
 
     vel_break = false;
 
@@ -111,10 +104,11 @@ void drone_connection::pose_cb(const nav_msgs::Odometry::ConstPtr& msg){
 void drone_connection::vel_cmd_cb(const geometry_msgs::Twist::ConstPtr& msg){
     //vel_cmd_import = *msg;
     
-    std::cout << std::fixed << std::showpoint;
-    std::cout << std::setprecision(3);
-    std::cout << "Publ. time: " << ros::Time::now() - ros_time_last << " - ";
-    ros_time_last = ros::Time::now(); 
+    // To print publishing frequenz:
+    // std::cout << std::fixed << std::showpoint;
+    // std::cout << std::setprecision(3);
+    // std::cout << "Publ. time: " << ros::Time::now() - ros_time_last << " - ";
+    // ros_time_last = ros::Time::now(); 
 
     vel_break = true;
     cmd_vel_unstmpd_pub.publish(*msg);
@@ -173,7 +167,6 @@ int drone_connection::take_off()
             }
         }
 
-        
         if(curr_pose.pose.pose.position.z >= take_off_alti_pose.pose.position.z - 0.05) hight_check = true;
         if(hight_check == true) cntr++;
         if(cntr == wait_time) {

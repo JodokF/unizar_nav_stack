@@ -17,7 +17,6 @@ poly_traj_plan::poly_traj_plan(ros::NodeHandle& nh){
     waypoint_cntr = 0;
     marker_cntr = 0;
     sampling_interval = 0.05;
-    vel_threshold = 0.3;
 
     // for the simulation: (instead of the optitrack goal)
         goal.pose.position.x = 2; 
@@ -233,13 +232,13 @@ int poly_traj_plan::run_navigation_node(){
     while_loop_ctrl = 0;
 
     // Debug Info:
-    std::cout << "---\nDrooone position (x, y, z): (" << odom_info.pose.position.x << ", " 
-                                                    << odom_info.pose.position.y << ", " 
-                                                    << odom_info.pose.position.z << ") \n"; 
+    std::cout << "---\nDrooone position for planner (x, y, z): (" << odom_info.pose.position.x << ", " 
+                                                                << odom_info.pose.position.y << ", " 
+                                                                << odom_info.pose.position.z << ") \n"; 
 
-    std::cout << "Goal  position (x, y, z): (" << goal.pose.position.x << ", " 
-                                                << goal.pose.position.y << ", " 
-                                                << goal.pose.position.z << ") \n---\n";
+    std::cout << "Goal  position (x, y, z) for planner: ("  << goal.pose.position.x << ", " 
+                                                            << goal.pose.position.y << ", " 
+                                                            << goal.pose.position.z << ") \n---\n";
 
 
     // start_pose is assigened in the odom callback
@@ -298,24 +297,26 @@ bool poly_traj_plan::generate_trajectory() {
     start.makeStartOrEnd(Eigen::Vector3d(odom_info.pose.position.x,odom_info.pose.position.y,odom_info.pose.position.z), derivative_to_optimize);
 
     std::cout << "\n---\n";
-    std::cout << "Start x, y, z: \t"    << odom_info.pose.position.x << ", " 
-                                        << odom_info.pose.position.y << ", " 
-                                        << odom_info.pose.position.z << std::endl;
+    std::cout << "Start for traj. x, y, z: \t"    << odom_info.pose.position.x << ", " 
+                                                << odom_info.pose.position.y << ", " 
+                                                << odom_info.pose.position.z << std::endl;
     vertices.push_back(start);
 
 
     //drawMarkerArray(vxblx_waypoints, 2, 1);
 
     // insert points between each waypoint to get a stricter trajectory:
-    for (size_t i = 0; i < vxblx_waypoints.poses.size() - 1; ++i) {
-        // Calculate the midpoint between the current pose and the next pose
-        geometry_msgs::Pose midpoint = calculateMidpoint(vxblx_waypoints.poses[i], vxblx_waypoints.poses[i + 1]);
+    for(int i = 0; i < 2; i++){
+        for (size_t i = 0; i < vxblx_waypoints.poses.size() - 1; ++i) {
+            // Calculate the midpoint between the current pose and the next pose
+            geometry_msgs::Pose midpoint = calculateMidpoint(vxblx_waypoints.poses[i], vxblx_waypoints.poses[i + 1]);
 
-        // Insert the midpoint pose between the current and next pose
-        vxblx_waypoints.poses.insert(vxblx_waypoints.poses.begin() + i + 1, midpoint);
+            // Insert the midpoint pose between the current and next pose
+            vxblx_waypoints.poses.insert(vxblx_waypoints.poses.begin() + i + 1, midpoint);
 
-        // Increment the index to account for the newly inserted midpoint pose
-        ++i;
+            // Increment the index to account for the newly inserted midpoint pose
+            ++i;
+        }
     }
     
     // delete the first and last entry of the recived trajectory waypoints 
@@ -354,9 +355,9 @@ bool poly_traj_plan::generate_trajectory() {
     // make end point, z + 1 meter: 
     end.makeStartOrEnd(Eigen::Vector3d(goal.pose.position.x,goal.pose.position.y,goal.pose.position.z), derivative_to_optimize);
     vertices.push_back(end);
-    std::cout << "Goal x, y, z: \t" << goal.pose.position.x << ", " 
-                                    << goal.pose.position.y << ", " 
-                                    << goal.pose.position.z << std::endl;
+    std::cout << "Goal for traj. x, y, z: \t" << goal.pose.position.x << ", " 
+                                            << goal.pose.position.y << ", " 
+                                            << goal.pose.position.z << std::endl;
     std::cout << "\n---\n";
 
     
@@ -364,6 +365,7 @@ bool poly_traj_plan::generate_trajectory() {
     // Provide the time constraints on the vertices
     //Automatic time computation 
     std::vector<double> segment_times;
+    vel_threshold = 1;
     const double v_max = vel_threshold; 
     const double a_max = vel_threshold;
     segment_times = estimateSegmentTimes(vertices, v_max, a_max);
@@ -432,7 +434,30 @@ void poly_traj_plan::send_vel_commands() {
 }
 
 
+int check_trajectory(){
+
+        std::cout << "Do you want to continue with this trajectory? (y/n): ";
+        
+        // Declare a variable to store user input
+        char userInput;
+        std::cin >> userInput; // Read user input
+
+        // Check if the user wants to continue or abort
+        if (userInput == 'y' || userInput == 'Y') return 0; 
+        else if (userInput == 'n' || userInput == 'N') {
+            return 1;
+        } 
+        else {
+            // Handle invalid input
+            ROS_ERROR("Invalid input donkey.");
+            return 2; // Exit the program with an error code
+        }
+
+}
+
 /******************** main() ******************/
+
+
 
 int main(int argc, char** argv){
     
@@ -443,34 +468,24 @@ int main(int argc, char** argv){
     poly_traj_plan ptp(std::ref(node_handle));
     int current_traj_state = 0;
 
-    // run the navigation node and get the trajectory    
-    std::cout << ("\n\n---\n\n");
-    int nav_func_checker = ptp.run_navigation_node();
 
-    if (nav_func_checker == 0) ROS_INFO("Navigation succesfully");
-    else if (nav_func_checker == -1 ){
-        ROS_ERROR("Navigation error");
-        return -1;
-    }
+    bool traj_checker = false;
+    do{
+        // run the navigation node and get the trajectory    
+        std::cout << ("\n\n---\n\n");
+        int nav_func_checker = ptp.run_navigation_node();
+
+        if (nav_func_checker == 0) ROS_INFO("Navigation succesfully");
+        else if (nav_func_checker == -1 ){
+            ROS_ERROR("Navigation error");
+            return -1;
+        }
+        
+        if(check_trajectory() == 0) traj_checker = true;
     
-    std::cout << "\n\n\n !!! Check the trajectory in RViz before take off!!! \n\n\n";
-    ros::Duration(3).sleep();
-    std::cout << "Do you want to continue? (y/n): ";
     
-    // Declare a variable to store user input
-    char userInput;
-    std::cin >> userInput; // Read user input
+    } while (traj_checker == false);
     
-    // Check if the user wants to continue or abort
-    if (userInput == 'y' || userInput == 'Y') {
-    } else if (userInput == 'n' || userInput == 'N') {
-        ROS_ERROR("Aborting program");
-        return 0; // Exit the program
-    } else {
-        // Handle invalid input
-        ROS_ERROR("Invalid input.");
-        return 1; // Exit the program with an error code
-    }
     
     // sending vel commands to the real drone
     while(ros::ok()){
