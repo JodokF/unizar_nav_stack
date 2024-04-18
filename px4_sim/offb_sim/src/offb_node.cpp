@@ -61,24 +61,25 @@ int main(int argc, char **argv)
     ros::Publisher cmd_vel_pub = nh.advertise<geometry_msgs::TwistStamped>
             ("mavros/setpoint_velocity/cmd_vel", 10); 
     ros::Publisher cmd_vel_unstamped_pub = nh.advertise<geometry_msgs::Twist>
+            //("/cmd_vel_setpoint", 10);
             ("mavros/setpoint_velocity/cmd_vel_unstamped", 10);
     ros::Subscriber pose_sub = nh.subscribe<nav_msgs::Odometry>
-            ("/gazebo/ground_truth/pose", 10, pose_cb);
+            ("/mavros/odometry/out", 10, pose_cb);
+            //("/gazebo/ground_truth/pose", 10, pose_cb);
     ros::Subscriber fused_pose_sub = nh.subscribe<geometry_msgs::PoseStamped>
             ("/mavros/local_position/pose", 10, fused_pose_cb);
     ros::ServiceClient set_cmd_vel_frame = nh.serviceClient<mavros_msgs::SetMavFrame>
             ("/mavros/setpoint_velocity/mav_frame");
             
-    //the setpoint publishing rate MUST be faster than 2Hz
-    ros::Rate rate(100.0);
+    //the setpoint publishing rate100 MUST be faster than 2Hz
+    ros::Rate rate100(100.0);
 
     // wait for FCU connection
     while(ros::ok() && !current_state.connected){
         ros::spinOnce();
-        rate.sleep();
+        rate100.sleep();
     }
 
-   
     geometry_msgs::PoseStamped pose;
     pose.pose.position.x = 0;
     pose.pose.position.y = 0;
@@ -107,7 +108,7 @@ int main(int argc, char **argv)
     for(int i = 50; ros::ok() && i > 0; --i){
         local_pos_pub.publish(pose);
         ros::spinOnce();
-        rate.sleep();
+        rate100.sleep();
     }
 
     mavros_msgs::SetMode offb_set_mode;
@@ -148,7 +149,7 @@ int main(int argc, char **argv)
         local_pos_pub.publish(pose);
 
         ros::spinOnce();
-        rate.sleep();
+        rate100.sleep();
     }
     
 
@@ -158,7 +159,7 @@ int main(int argc, char **argv)
         cmd_vel_unstamped_pub.publish(cmd_vel_unstamped);
                                
         ros::spinOnce();
-        rate.sleep();
+        rate100.sleep();
 
     }
 

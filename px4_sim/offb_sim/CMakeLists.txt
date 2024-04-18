@@ -30,5 +30,8 @@ target_link_libraries(${PROJECT_NAME}_node ${catkin_LIBRARIES})
 add_executable(vision_topic_handler src/vision_topic_handler.cpp)
 target_link_libraries(vision_topic_handler ${catkin_LIBRARIES})
 
+add_executable(p_controller_test src/p_controller_test.cpp)
+target_link_libraries(p_controller_test ${catkin_LIBRARIES})
+
 
 

@@ -4,7 +4,7 @@
 
 poly_traj_plan::poly_traj_plan(ros::NodeHandle& nh){    
 
-    odom_topic = "/mavros/vision_pose/pose";
+    odom_topic = "/mavros/odometry/out";
     //odom_topic = "/optitrack/pose"; // = cine_mpc drone pose (when the optitrack launch file is executed)
     //goal_topic = "/vrpn_client_node/goal_optitrack/pose";
 

@@ -53,7 +53,7 @@ drone_connection::drone_connection(ros::NodeHandle& nh)
     vel_sub = nh.subscribe<geometry_msgs::Twist>
         ("/vel_cmd_2_drone", 10, &drone_connection::vel_cmd_cb, this);
     pose_sub = nh.subscribe<nav_msgs::Odometry>
-        ("/gazebo/ground_truth/pose", 10, &drone_connection::pose_cb,this);
+        ("/mavros/odometry/out", 10, &drone_connection::pose_cb,this);
     local_pos_pub = nh.advertise<geometry_msgs::PoseStamped>
         ("/mavros/setpoint_position/local", 10);
     arming_client = nh.serviceClient<mavros_msgs::CommandBool>
