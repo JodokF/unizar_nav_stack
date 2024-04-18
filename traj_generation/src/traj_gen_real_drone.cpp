@@ -31,7 +31,7 @@ poly_traj_plan::poly_traj_plan(ros::NodeHandle& nh){
                 ("/trajectory_markers", 0);
     marker_pub = nh.advertise<visualization_msgs::MarkerArray>
                 ("/waypoint_markers", 10);
-    pose_sub = nh.subscribe<geometry_msgs::PoseStamped>
+    pose_sub = nh.subscribe<nav_msgs::Odometry>
                 (odom_topic,10,&poly_traj_plan::poseCallback,this);
     goal_sub = nh.subscribe<geometry_msgs::PoseStamped>
                 (goal_topic,10,&poly_traj_plan::goalCallback,this);
@@ -73,7 +73,7 @@ void poly_traj_plan::goalCallback(const geometry_msgs::PoseStamped::ConstPtr &ms
 
 }
 
-void poly_traj_plan::poseCallback(const geometry_msgs::PoseStamped::ConstPtr &msg){    
+void poly_traj_plan::poseCallback(const nav_msgs::Odometry::ConstPtr &msg){    
     odom_info = *msg;
     odom_received = true;
     // std::cout << "\n--- odom received ---\n";
@@ -232,9 +232,9 @@ int poly_traj_plan::run_navigation_node(){
     while_loop_ctrl = 0;
 
     // Debug Info:
-    std::cout << "---\nDrooone position for planner (x, y, z): (" << odom_info.pose.position.x << ", " 
-                                                                << odom_info.pose.position.y << ", " 
-                                                                << odom_info.pose.position.z << ") \n"; 
+    std::cout << "---\nDrooone position for planner (x, y, z): (" << odom_info.pose.pose.position.x << ", " 
+                                                                << odom_info.pose.pose.position.y << ", " 
+                                                                << odom_info.pose.pose.position.z << ") \n"; 
 
     std::cout << "Goal  position (x, y, z) for planner: ("  << goal.pose.position.x << ", " 
                                                             << goal.pose.position.y << ", " 
@@ -242,9 +242,9 @@ int poly_traj_plan::run_navigation_node(){
 
 
     // start_pose is assigened in the odom callback
-    request.request.start_pose.pose.position.x = odom_info.pose.position.x;
-    request.request.start_pose.pose.position.y = odom_info.pose.position.y;
-    request.request.start_pose.pose.position.z = odom_info.pose.position.z; 
+    request.request.start_pose.pose.position.x = odom_info.pose.pose.position.x;
+    request.request.start_pose.pose.position.y = odom_info.pose.pose.position.y;
+    request.request.start_pose.pose.position.z = odom_info.pose.pose.position.z; 
 
     request.request.goal_pose.pose.position.x = goal.pose.position.x;
     request.request.goal_pose.pose.position.y = goal.pose.position.y;
@@ -294,12 +294,12 @@ bool poly_traj_plan::generate_trajectory() {
     mav_trajectory_generation::Vertex start(dimension), middle_points(dimension), end(dimension);
 
         // make start point: 
-    start.makeStartOrEnd(Eigen::Vector3d(odom_info.pose.position.x,odom_info.pose.position.y,odom_info.pose.position.z), derivative_to_optimize);
+    start.makeStartOrEnd(Eigen::Vector3d(odom_info.pose.pose.position.x,odom_info.pose.pose.position.y,odom_info.pose.pose.position.z), derivative_to_optimize);
 
     std::cout << "\n---\n";
-    std::cout << "Start for traj. x, y, z: \t"    << odom_info.pose.position.x << ", " 
-                                                << odom_info.pose.position.y << ", " 
-                                                << odom_info.pose.position.z << std::endl;
+    std::cout << "Start for traj. x, y, z: \t"    << odom_info.pose.pose.position.x << ", " 
+                                                << odom_info.pose.pose.position.y << ", " 
+                                                << odom_info.pose.pose.position.z << std::endl;
     vertices.push_back(start);
 
 

@@ -59,7 +59,7 @@ class poly_traj_plan{
 
         geometry_msgs::PoseArray vxblx_waypoints;
         // std::vector<geometry_msgs::Pose> trajectory;
-        geometry_msgs::PoseStamped odom_info;
+        nav_msgs::Odometry odom_info;
         geometry_msgs::PoseStamped goal;
         geometry_msgs::Twist vel_msg;
         hector_uav_msgs::EnableMotors motor_enable_service_msg;
@@ -69,7 +69,7 @@ class poly_traj_plan{
 
 
         // functions:
-        void poseCallback(const geometry_msgs::PoseStamped::ConstPtr &msg);
+        void poseCallback(const nav_msgs::Odometry::ConstPtr &msg);
         void planCallback(const geometry_msgs::PoseArray::ConstPtr &msg);
         void goalCallback(const geometry_msgs::PoseStamped::ConstPtr &msg);
         void drawMAVTrajectoryMarkers();
