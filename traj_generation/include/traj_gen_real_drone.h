@@ -61,7 +61,8 @@ class poly_traj_plan{
         // std::vector<geometry_msgs::Pose> trajectory;
         nav_msgs::Odometry odom_info;
         geometry_msgs::PoseStamped goal;
-        geometry_msgs::Twist vel_msg;
+        geometry_msgs::PoseStamped cmd_pose;
+        geometry_msgs::Twist cmd_vel;
         hector_uav_msgs::EnableMotors motor_enable_service_msg;
         std_srvs::Empty path_plan_req;
         ros::ServiceClient motor_enable_service; 

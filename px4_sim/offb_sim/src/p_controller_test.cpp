@@ -71,10 +71,10 @@ p_controller::p_controller(ros::NodeHandle& nh)
     cmd_vel.angular.y = 0;
     cmd_vel.angular.z = 0; 
 
-    k_gain_x = 0.5;
-    k_gain_y = 0.5;
+    k_gain_x = 0.8;
+    k_gain_y = 0.8;
 
-    k_gain_z = 2.4;
+    k_gain_z = 1.65;
 
    
 
@@ -110,17 +110,17 @@ void p_controller::p_cntrl(){
     std::cout << std::fixed << std::showpoint;
     std::cout << std::setprecision(3); 
 
-    cmd_vel.linear.x =  current_setpoint.linear.x + k_gain_x * (current_setpoint.linear.x - feedback_pose.twist.twist.linear.x);
-    cmd_vel.linear.y =  current_setpoint.linear.y + k_gain_y * (current_setpoint.linear.y - feedback_pose.twist.twist.linear.y);
+    cmd_vel.linear.x =  current_setpoint.linear.x;// + k_gain_x * (current_setpoint.linear.x - feedback_pose.twist.twist.linear.x);
+    cmd_vel.linear.y =  current_setpoint.linear.y;// + k_gain_y * (current_setpoint.linear.y - feedback_pose.twist.twist.linear.y);
     cmd_vel.linear.z =  current_setpoint.linear.z + k_gain_z * (current_setpoint.linear.z - feedback_pose.twist.twist.linear.z);
     cmd_vel.angular.x = current_setpoint.angular.x;
     cmd_vel.angular.y = current_setpoint.angular.y;
     cmd_vel.angular.z = current_setpoint.angular.z;
 
-    std::cout << "Sp. - Fb. x:  " << current_setpoint.linear.x << " - " << feedback_pose.twist.twist.linear.x << std::endl;
-    std::cout << "Sp. - Fb. y:  " << current_setpoint.linear.y << " - " << feedback_pose.twist.twist.linear.y << std::endl;
-    std::cout << "Sp. - Fb. z:  " << current_setpoint.linear.z << " - " << feedback_pose.twist.twist.linear.z << std::endl;
-    std::cout << "Pub. Vel. (x, y, z): (" << cmd_vel.linear.x << ", " << cmd_vel.linear.y << ", " << cmd_vel.linear.z << ")\n";
+    // std::cout << "Sp. - Fb. x:  " << current_setpoint.linear.x << " - " << feedback_pose.twist.twist.linear.x << std::endl;
+    // std::cout << "Sp. - Fb. y:  " << current_setpoint.linear.y << " - " << feedback_pose.twist.twist.linear.y << std::endl;
+    // std::cout << "Sp. - Fb. z:  " << current_setpoint.linear.z << " - " << feedback_pose.twist.twist.linear.z << std::endl;
+    std::cout << "Pub. Vel. (x, y, z) k: (" << cmd_vel.linear.x << ", " << cmd_vel.linear.y << ", " << cmd_vel.linear.z << ") " << k_gain_z << "\n";
     std::cout << "---\n";
     cmd_vel_unstmpd_pub.publish(cmd_vel);
 

@@ -10,8 +10,8 @@ Panels:
         - /MarkerArray1
         - /RobotModel1
         - /TF1
-        - /TF1/Status1
         - /TF1/Frames1
+        - /Axes1/Status1
         - /Path1
       Splitter Ratio: 0.5
     Tree Height: 728
@@ -233,9 +233,9 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.5647951364517212
+      Pitch: 0.5847942233085632
       Target Frame: <Fixed Frame>
-      Yaw: 4.458541393280029
+      Yaw: 3.5635366439819336
     Saved: ~
 Window Geometry:
   Displays:

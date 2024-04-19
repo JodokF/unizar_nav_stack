@@ -26,7 +26,7 @@ poly_traj_plan::poly_traj_plan(ros::NodeHandle& nh){
     vel_pub = nh.advertise<geometry_msgs::Twist>
                 ("/vel_cmd_2_drone",10);
     pose_pub = nh.advertise<geometry_msgs::PoseStamped>
-                ("/command/pose", 10);
+                ("/pose_cmd_2_drone", 10);
     mav_traj_markers_pub = nh.advertise<visualization_msgs::MarkerArray>
                 ("/trajectory_markers", 0);
     marker_pub = nh.advertise<visualization_msgs::MarkerArray>
@@ -201,22 +201,6 @@ void poly_traj_plan::drawMAVTrajectoryMarkers(){
     mav_traj_markers_pub.publish(markers);
 }
 
-/*
-double poly_traj_plan::goalDistance(geometry_msgs::Pose pose, geometry_msgs::Point goal){
-    double x_diff = goal.x - pose.position.x, y_diff = goal.y - pose.position.y, z_diff = goal.z - pose.position.z;
-    double euc_dis = sqrt(x_diff*x_diff+y_diff*y_diff+z_diff*z_diff);
-    return euc_dis;
-}
-
-double poly_traj_plan::get_yaw_from_quat(const geometry_msgs::Quaternion q){
-    double roll, pitch, yaw;
-    tf2::Quaternion quat_tf;
-    tf2::fromMsg(q, quat_tf);
-    tf2::Matrix3x3(quat_tf).getRPY(roll, pitch, yaw);
-    return yaw;
-}
-*/
-
 int poly_traj_plan::run_navigation_node(){
 
     ROS_INFO("Navigation Node Starts");
@@ -297,7 +281,7 @@ bool poly_traj_plan::generate_trajectory() {
     start.makeStartOrEnd(Eigen::Vector3d(odom_info.pose.pose.position.x,odom_info.pose.pose.position.y,odom_info.pose.pose.position.z), derivative_to_optimize);
 
     std::cout << "\n---\n";
-    std::cout << "Start for traj. x, y, z: \t"    << odom_info.pose.pose.position.x << ", " 
+    std::cout << "Start for traj. x, y, z: \t"  << odom_info.pose.pose.position.x << ", " 
                                                 << odom_info.pose.pose.position.y << ", " 
                                                 << odom_info.pose.pose.position.z << std::endl;
     vertices.push_back(start);
@@ -409,25 +393,45 @@ bool poly_traj_plan::generate_trajectory() {
 void poly_traj_plan::send_vel_commands() {
     
     if(curr_state <= traj_states.size()){ 
-        vel_msg.linear.x = traj_states[curr_state].velocity_W.x();
-        vel_msg.linear.y = traj_states[curr_state].velocity_W.y();
-        vel_msg.linear.z = traj_states[curr_state].velocity_W.z();
-        vel_msg.angular.x = traj_states[curr_state].angular_velocity_W.x();
-        vel_msg.angular.y = traj_states[curr_state].angular_velocity_W.y();
-        vel_msg.angular.z = traj_states[curr_state].angular_velocity_W.z();
+        cmd_vel.linear.x = traj_states[curr_state].velocity_W.x();
+        cmd_vel.linear.y = traj_states[curr_state].velocity_W.y();
+        cmd_vel.linear.z = traj_states[curr_state].velocity_W.z();
+        cmd_vel.angular.x = traj_states[curr_state].angular_velocity_W.x();
+        cmd_vel.angular.y = traj_states[curr_state].angular_velocity_W.y();
+        cmd_vel.angular.z = traj_states[curr_state].angular_velocity_W.z();
+
+        cmd_pose.pose.position.x = traj_states[curr_state].position_W.x();
+        cmd_pose.pose.position.y = traj_states[curr_state].position_W.y();
+        cmd_pose.pose.position.z = traj_states[curr_state].position_W.z();
+        cmd_pose.pose.orientation.x = traj_states[curr_state].orientation_W_B.x();
+        cmd_pose.pose.orientation.y = traj_states[curr_state].orientation_W_B.y();
+        cmd_pose.pose.orientation.z = traj_states[curr_state].orientation_W_B.z();
+        cmd_pose.pose.orientation.w = traj_states[curr_state].orientation_W_B.w();
+
 
         // Publish the command
-        vel_pub.publish(vel_msg);
+        pose_pub.publish(cmd_pose);
+        vel_pub.publish(cmd_vel);
+
 
     }else{
-        vel_msg.linear.x = 0.0;
-        vel_msg.linear.y = 0.0;
-        vel_msg.linear.z = 0.0;
-        vel_msg.angular.x = 0.0;
-        vel_msg.angular.y = 0.0;
-        vel_msg.angular.z = 0.0;
-        
-        vel_pub.publish(vel_msg);
+        cmd_vel.linear.x = 0.0;
+        cmd_vel.linear.y = 0.0;
+        cmd_vel.linear.z = 0.0;
+        cmd_vel.angular.x = 0.0;
+        cmd_vel.angular.y = 0.0;
+        cmd_vel.angular.z = 0.0;
+
+        cmd_pose.pose.position.x = traj_states[traj_states.size()-1].position_W.x();
+        cmd_pose.pose.position.y = traj_states[traj_states.size()-1].position_W.y();
+        cmd_pose.pose.position.z = traj_states[traj_states.size()-1].position_W.z();
+        cmd_pose.pose.orientation.x = traj_states[traj_states.size()-1].orientation_W_B.x();
+        cmd_pose.pose.orientation.y = traj_states[traj_states.size()-1].orientation_W_B.y();
+        cmd_pose.pose.orientation.z = traj_states[traj_states.size()-1].orientation_W_B.z();
+        cmd_pose.pose.orientation.w = traj_states[traj_states.size()-1].orientation_W_B.w();
+
+        pose_pub.publish(cmd_pose);
+        vel_pub.publish(cmd_vel);
         
     }
         curr_state++;
@@ -489,6 +493,7 @@ int main(int argc, char** argv){
     
     // sending vel commands to the real drone
     while(ros::ok()){
+        
         ptp.send_vel_commands();
         ros::Duration(ptp.sampling_interval).sleep();
         // ros::Duration(0.05).sleep();
