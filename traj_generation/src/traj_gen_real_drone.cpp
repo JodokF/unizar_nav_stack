@@ -19,9 +19,9 @@ poly_traj_plan::poly_traj_plan(ros::NodeHandle& nh){
     sampling_interval = 0.05;
 
     // for the simulation: (instead of the optitrack goal)
-        goal.pose.position.x = 2; 
-        goal.pose.position.y = -1; 
-        goal.pose.position.z = 0.75; 
+        goal.pose.position.x = 0; // 2; 
+        goal.pose.position.y = 0; // -1; 
+        goal.pose.position.z = 2; // 0.75; 
 
     vel_pub = nh.advertise<geometry_msgs::Twist>
                 ("/vel_cmd_2_drone",10);
@@ -90,7 +90,7 @@ geometry_msgs::Pose poly_traj_plan::calculateMidpoint(const geometry_msgs::Pose&
     return midpoint;
 }
 
-void poly_traj_plan::drawMarkerArray(geometry_msgs::PoseArray waypoints, int color, int offset){
+void poly_traj_plan::drawMarkerArray(std::vector<nav_msgs::Odometry> waypoints, int color, int offset){
      
     // offset -> if else markers would be on the same spot
     
@@ -104,7 +104,7 @@ void poly_traj_plan::drawMarkerArray(geometry_msgs::PoseArray waypoints, int col
     visualization_msgs::MarkerArray marker_array;
 
     // Create a marker for each pose in the PoseArray
-    for (size_t i = 0; i < waypoints.poses.size(); ++i) {
+    for (size_t i = 0; i < waypoints.size(); ++i) {
         // Create a new marker for each pose
         visualization_msgs::Marker marker;
         marker.header.frame_id = "odom"; 
@@ -114,11 +114,11 @@ void poly_traj_plan::drawMarkerArray(geometry_msgs::PoseArray waypoints, int col
         marker_cntr++;
         marker.type = visualization_msgs::Marker::SPHERE;
         marker.action = visualization_msgs::Marker::ADD;
-        if (offset == 0) marker.pose = waypoints.poses[i]; // Set the pose of the marker
+        if (offset == 0) marker.pose = waypoints.at(i).pose.pose; // Set the pose of the marker
         if (offset == 1 ){
-            marker.pose.position.x = waypoints.poses.at(i).position.x + 0.5;
-            marker.pose.position.y = waypoints.poses.at(i).position.y;
-            marker.pose.position.z = waypoints.poses.at(i).position.z;
+            marker.pose.position.x = waypoints.at(i).pose.pose.position.x + 0.5;
+            marker.pose.position.y = waypoints.at(i).pose.pose.position.y;
+            marker.pose.position.z = waypoints.at(i).pose.pose.position.z;
             marker.pose.orientation.x = 0;
             marker.pose.orientation.y = 0;
             marker.pose.orientation.z = 0;
@@ -234,6 +234,7 @@ int poly_traj_plan::run_navigation_node(){
     request.request.goal_pose.pose.position.y = goal.pose.position.y;
     request.request.goal_pose.pose.position.z = goal.pose.position.z;
 
+    /*
     // requesting voxblox-rrt-planner to plan:
     try {
         if (!ros::service::call(planner_service, request)) {
@@ -261,6 +262,7 @@ int poly_traj_plan::run_navigation_node(){
         if (while_loop_ctrl == 5) return -1;
     }
     while_loop_ctrl = 0;
+    */
 
     if (generate_trajectory() == true) return 0;
     else return -1;
@@ -271,14 +273,96 @@ int poly_traj_plan::run_navigation_node(){
 bool poly_traj_plan::generate_trajectory() {
 
     //constants
-    const int dimension = 3; //we only compute the trajectory in x, y and z
+    const int dimension = 4; //we only compute the trajectory in x, y and z
     const int derivative_to_optimize = mav_trajectory_generation::derivative_order::SNAP; //POSITION, VELOCITY, ACCELERATION, JERK, SNAP
 
     // Definition of the trajectory beginning, end and intermediate constraints
     mav_trajectory_generation::Vertex start(dimension), middle_points(dimension), end(dimension);
 
-        // make start point: 
-    start.makeStartOrEnd(Eigen::Vector3d(odom_info.pose.pose.position.x,odom_info.pose.pose.position.y,odom_info.pose.pose.position.z), derivative_to_optimize);
+    //drawMarkerArray(vxblx_waypoints, 2, 1);
+
+    // hardcoded waypoirts for debugging to use it without voxblox:
+        geometry_msgs::Pose pose;
+        nav_msgs::Odometry wp0, wp1, wp2, wp3, wp4, wp5, wp6, wp7, wp8; // wp = waypoint, wp0 & wp8 = start & end
+    
+        double x_y_vel = 0.1;
+        double z_vel_lin = x_y_vel / 2; 
+        double z_vel_ang = 0;
+        
+        wp1.pose.pose.position.x = 1;
+        wp1.pose.pose.position.y = 1;
+        wp1.pose.pose.position.z = 2.5;
+        wp1.pose.pose.orientation.z = 0; // we use it now as if it were yaw and not a quaternion
+        wp1.twist.twist.linear.x = x_y_vel;
+        wp1.twist.twist.linear.y = 0; 
+        wp1.twist.twist.linear.z = z_vel_lin;
+        wp1.twist.twist.angular.z = -z_vel_ang;
+
+        wp2.pose.pose.position.x = 2;
+        wp2.pose.pose.position.y = 0;
+        wp2.pose.pose.position.z = 3;
+        wp2.pose.pose.orientation.z = (3*M_PI)/2; // we use it now as if it were yaw and not a quaternion
+        wp2.twist.twist.linear.x = 0;
+        wp2.twist.twist.linear.y = -x_y_vel; 
+        wp2.twist.twist.linear.z = 0;
+        wp2.twist.twist.angular.z = -z_vel_ang;
+
+        wp3.pose.pose.position.x = 1;
+        wp3.pose.pose.position.y = -1;
+        wp3.pose.pose.position.z = 2.5;
+        wp3.pose.pose.orientation.z = M_PI; 
+        wp3.twist.twist.linear.x = -x_y_vel;
+        wp3.twist.twist.linear.y = 0; 
+        wp3.twist.twist.linear.z = -z_vel_lin;
+        wp3.twist.twist.angular.z = -z_vel_ang;
+
+        wp4.pose.pose.position.x = 0;
+        wp4.pose.pose.position.y = 0;
+        wp4.pose.pose.position.z = 2;
+        wp4.pose.pose.orientation.z = (3*M_PI)/4; 
+        wp4.twist.twist.linear.x = -x_y_vel;
+        wp4.twist.twist.linear.y =  x_y_vel; 
+        wp4.twist.twist.linear.z = -z_vel_lin;
+        wp4.twist.twist.angular.z = 0;
+
+        wp5.pose.pose.position.x = -1;
+        wp5.pose.pose.position.y = 1;
+        wp5.pose.pose.position.z = 1.5;
+        wp5.pose.pose.orientation.z = M_PI; 
+        wp5.twist.twist.linear.x = -x_y_vel;
+        wp5.twist.twist.linear.y = 0; 
+        wp5.twist.twist.linear.z = -z_vel_lin;
+        wp5.twist.twist.angular.z = z_vel_ang;
+
+        wp6.pose.pose.position.x = -2;
+        wp6.pose.pose.position.y = 0;
+        wp6.pose.pose.position.z = 1;
+        wp6.pose.pose.orientation.z = (3*M_PI)/2; 
+        wp6.twist.twist.linear.x = 0;
+        wp6.twist.twist.linear.y = -x_y_vel; 
+        wp6.twist.twist.linear.z = 0;
+        wp6.twist.twist.angular.z = z_vel_ang;
+
+        wp7.pose.pose.position.x = -1;
+        wp7.pose.pose.position.y = -1;
+        wp7.pose.pose.position.z = 1.5;
+        wp7.pose.pose.orientation.z = 0; 
+        wp7.twist.twist.linear.x = x_y_vel;
+        wp7.twist.twist.linear.y = 0; 
+        wp7.twist.twist.linear.z = z_vel_lin;
+        wp7.twist.twist.angular.z = z_vel_ang;
+
+        std::vector<nav_msgs::Odometry> full_eight = {wp0, wp1, wp2, wp3, wp4, wp5, wp6, wp7, wp8};
+
+        drawMarkerArray(full_eight, 1, 0);
+
+    
+    // make start point: 
+    start.makeStartOrEnd(Eigen::Vector4d(odom_info.pose.pose.position.x,
+                                         odom_info.pose.pose.position.y,
+                                         odom_info.pose.pose.position.z, 
+                                         M_PI/4), 
+                                         derivative_to_optimize);
 
     std::cout << "\n---\n";
     std::cout << "Start for traj. x, y, z: \t"  << odom_info.pose.pose.position.x << ", " 
@@ -287,8 +371,7 @@ bool poly_traj_plan::generate_trajectory() {
     vertices.push_back(start);
 
 
-    //drawMarkerArray(vxblx_waypoints, 2, 1);
-
+/*
     // insert points between each waypoint to get a stricter trajectory:
     for(int i = 0; i < 2; i++){
         for (size_t i = 0; i < vxblx_waypoints.poses.size() - 1; ++i) {
@@ -302,42 +385,65 @@ bool poly_traj_plan::generate_trajectory() {
             ++i;
         }
     }
-    
+
+*/  
     // delete the first and last entry of the recived trajectory waypoints 
     // becaue they are already considered in start and goal vertices
-    vxblx_waypoints.poses.erase(vxblx_waypoints.poses.begin());
-    vxblx_waypoints.poses.erase(vxblx_waypoints.poses.end() - 1);
+    // commented for debugging without voxblox
+    full_eight.erase(full_eight.begin());
+    full_eight.erase(full_eight.end() - 1);
 
-    drawMarkerArray(vxblx_waypoints, 1, 0);
 
-        
-    for (const auto& waypoint : vxblx_waypoints.poses) {
+    for (const auto& waypoint : full_eight) {
 
         mav_trajectory_generation::Vertex middle_points(dimension);
         
         // Extract the position from the waypoints
-        Eigen::Vector3d wp_pos_eigen(
-            waypoint.position.x,
-            waypoint.position.y,
-            waypoint.position.z
+        //Eigen::Vector3d wp_pos_eigen(
+        Eigen::Vector4d pose_cnstr(
+            waypoint.pose.pose.position.x,
+            waypoint.pose.pose.position.y,
+            waypoint.pose.pose.position.z,
+            waypoint.pose.pose.orientation.z // we use it now as if it were yaw and not a quaternion
+        
         );
-                
-        std::cout << waypoint_cntr << ". Waypoint x, y, z: \t" 
-                  << waypoint.position.x << ", "
-                  << waypoint.position.y << ", " 
-                  << waypoint.position.z << std::endl;
-        waypoint_cntr++;
 
         // Add the position constraint for the waypoint
-        middle_points.addConstraint(mav_trajectory_generation::derivative_order::POSITION, wp_pos_eigen);
+        middle_points.addConstraint(mav_trajectory_generation::derivative_order::POSITION, pose_cnstr);
+
+        Eigen::Vector4d vel_cnstr( waypoint.twist.twist.linear.x,
+                                    waypoint.twist.twist.linear.y,
+                                    waypoint.twist.twist.linear.z,
+                                    waypoint.twist.twist.angular.z); 
+
+        middle_points.addConstraint(mav_trajectory_generation::derivative_order::VELOCITY, vel_cnstr);
         
         // Add the vertex to the trajectory vertices
         vertices.push_back(middle_points);
 
+        // DEBUG PRINT:
+        std::cout   << waypoint_cntr << ". Waypoint pose x, y, z & yaw: \t" 
+                    << waypoint.pose.pose.position.x << ", "
+                    << waypoint.pose.pose.position.y << ", "
+                    << waypoint.pose.pose.position.z << " & "
+                    << waypoint.pose.pose.orientation.z << "\n";
+
+        std::cout   << waypoint_cntr << ". Waypoint vel. x, y, z & yaw: \t" 
+                    << waypoint.twist.twist.linear.x  << ", "
+                    << waypoint.twist.twist.linear.y << ", "
+                    << waypoint.twist.twist.linear.z << " & "
+                    << waypoint.twist.twist.angular.z << "\n\n";
+
+        waypoint_cntr++;
+
     }
 
     // make end point, z + 1 meter: 
-    end.makeStartOrEnd(Eigen::Vector3d(goal.pose.position.x,goal.pose.position.y,goal.pose.position.z), derivative_to_optimize);
+    end.makeStartOrEnd(Eigen::Vector4d( goal.pose.position.x,
+                                        goal.pose.position.y,
+                                        goal.pose.position.z, 
+                                        M_PI/4), 
+                                        derivative_to_optimize);
     vertices.push_back(end);
     std::cout << "Goal for traj. x, y, z: \t" << goal.pose.position.x << ", " 
                                             << goal.pose.position.y << ", " 
@@ -435,6 +541,7 @@ void poly_traj_plan::send_vel_commands() {
         
     }
         curr_state++;
+        // if(curr_state == traj_states.size()- 45) curr_state = 45;
 }
 
 
@@ -473,10 +580,11 @@ int main(int argc, char** argv){
     int current_traj_state = 0;
 
 
-    bool traj_checker = false;
-    do{
+// debugging to use without voxblox
+//    bool traj_checker = false;
+//    do{
         // run the navigation node and get the trajectory    
-        std::cout << ("\n\n---\n\n");
+        
         int nav_func_checker = ptp.run_navigation_node();
 
         if (nav_func_checker == 0) ROS_INFO("Navigation succesfully");
@@ -485,10 +593,10 @@ int main(int argc, char** argv){
             return -1;
         }
         
-        if(check_trajectory() == 0) traj_checker = true;
+//        if(check_trajectory() == 0) traj_checker = true;
     
     
-    } while (traj_checker == false);
+//    } while (traj_checker == false);
     
     
     // sending vel commands to the real drone

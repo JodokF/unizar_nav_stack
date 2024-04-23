@@ -68,13 +68,21 @@ class poly_traj_plan{
         ros::ServiceClient motor_enable_service; 
         ros::ServiceClient path_plan_client;
 
+        struct flying_eight {
+            double x;
+            double y;
+            double z;
+            double yaw;
+            double vel_z;
+        };
+
 
         // functions:
         void poseCallback(const nav_msgs::Odometry::ConstPtr &msg);
         void planCallback(const geometry_msgs::PoseArray::ConstPtr &msg);
         void goalCallback(const geometry_msgs::PoseStamped::ConstPtr &msg);
         void drawMAVTrajectoryMarkers();
-        void drawMarkerArray(geometry_msgs::PoseArray waypoints, int color, int offset);
+        void drawMarkerArray(std::vector<nav_msgs::Odometry> waypoints, int color, int offset);
         double goalDistance(geometry_msgs::Pose pose, geometry_msgs::Point goal);
         double get_yaw_from_quat(const geometry_msgs::Quaternion );
         geometry_msgs::Pose calculateMidpoint(const geometry_msgs::Pose& pose1, const geometry_msgs::Pose& pose2);
