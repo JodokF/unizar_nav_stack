@@ -17,7 +17,7 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <visualization_msgs/MarkerArray.h>
 
-#include <hector_uav_msgs/EnableMotors.h>
+// #include <hector_uav_msgs/EnableMotors.h>
 
 #include <eigen3/Eigen/Core>
 #include <eigen3/Eigen/Geometry>
@@ -63,7 +63,7 @@ class poly_traj_plan{
         geometry_msgs::PoseStamped goal;
         geometry_msgs::PoseStamped cmd_pose;
         geometry_msgs::Twist cmd_vel;
-        hector_uav_msgs::EnableMotors motor_enable_service_msg;
+        // hector_uav_msgs::EnableMotors motor_enable_service_msg;
         std_srvs::Empty path_plan_req;
         ros::ServiceClient motor_enable_service; 
         ros::ServiceClient path_plan_client;

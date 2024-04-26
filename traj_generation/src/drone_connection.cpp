@@ -14,10 +14,11 @@
 class drone_connection
 {
     private:
-        void state_cb(const mavros_msgs::State::ConstPtr& msg);
+        void mavros_state_cb(const mavros_msgs::State::ConstPtr& msg);
         void pose_cb(const nav_msgs::Odometry::ConstPtr& msg);
         void vel_cmd_cb(const geometry_msgs::Twist::ConstPtr& msg);
         void pose_cmd_cb(const geometry_msgs::PoseStamped::ConstPtr& msg);
+        double calc_euc_dist(geometry_msgs::Pose pose, geometry_msgs::Pose goal);
         
         ros::Subscriber state_sub;
         ros::Subscriber vel_cmd_sub;
@@ -35,13 +36,17 @@ class drone_connection
         mavros_msgs::SetMode offb_set_mode;
         mavros_msgs::CommandBool arm_cmd;
 
-        mavros_msgs::State current_state;
+        mavros_msgs::State current_mav_state;
         nav_msgs::Odometry curr_pose;
-        geometry_msgs::Twist vel_cmd_import;
-        geometry_msgs::PoseStamped pose_cmd_import;
+        geometry_msgs::Twist vel_cmd_in;
+        geometry_msgs::PoseStamped pose_cmd_in;
         ros::Time ros_time_last;
 
         double k_z;
+        double error;
+        double d_x;
+        double d_y;
+        double d_z;
 
     public:
         bool vel_break;
@@ -67,10 +72,9 @@ drone_connection::drone_connection(ros::NodeHandle& nh)
     cmd_vel_unstmpd_pub = nh.advertise<geometry_msgs::Twist>
         ("/mavros/setpoint_velocity/cmd_vel_unstamped", 10);
 
-
     /* --- MAVROS STUFF --- */
     state_sub = nh.subscribe<mavros_msgs::State>
-        ("/mavros/state", 10, &drone_connection::state_cb, this);
+        ("/mavros/state", 10, &drone_connection::mavros_state_cb, this);
     arming_client = nh.serviceClient<mavros_msgs::CommandBool>
         ("/mavros/cmd/arming");
     set_mode_client = nh.serviceClient<mavros_msgs::SetMode>
@@ -78,7 +82,6 @@ drone_connection::drone_connection(ros::NodeHandle& nh)
     set_cmd_vel_frame = nh.serviceClient<mavros_msgs::SetMavFrame>
         ("/mavros/setpoint_velocity/mav_frame");
 
-    
     start_pose.pose.position.x = 0; // -1
     start_pose.pose.position.y = 0; // 2
     start_pose.pose.position.z = 2; // 1.2
@@ -87,7 +90,6 @@ drone_connection::drone_connection(ros::NodeHandle& nh)
     start_pose.pose.orientation.z = 0.383; // = 45 degree in z
     start_pose.pose.orientation.w = 0.924; // = 45 degree in z
    
-
     vel_break = false;
     k_z = 1.2;
 
@@ -99,8 +101,8 @@ drone_connection::~drone_connection()
 {
 }
 
-void drone_connection::state_cb(const mavros_msgs::State::ConstPtr& msg){
-    current_state = *msg;
+void drone_connection::mavros_state_cb(const mavros_msgs::State::ConstPtr& msg){
+    current_mav_state = *msg;
 }
 
 void drone_connection::pose_cb(const nav_msgs::Odometry::ConstPtr& msg){
@@ -108,16 +110,28 @@ void drone_connection::pose_cb(const nav_msgs::Odometry::ConstPtr& msg){
 }
 
 void drone_connection::pose_cmd_cb(const geometry_msgs::PoseStamped::ConstPtr& msg){
-    pose_cmd_import = *msg;
-    //pose_cmd_import.header.frame_id.at(5);
+    pose_cmd_in = *msg;
+    
+    std::cout << std::fixed << std::showpoint;
+    std::cout << std::setprecision(3);
+
+    d_x = curr_pose.pose.pose.position.x - pose_cmd_in.pose.position.x;
+    d_y = curr_pose.pose.pose.position.y - pose_cmd_in.pose.position.y;
+    d_z = curr_pose.pose.pose.position.z - pose_cmd_in.pose.position.z;
+
+    error = calc_euc_dist(curr_pose.pose.pose, pose_cmd_in.pose);
+
+    std::cout << "Error x, y, z: " << d_x << ", " << d_y << ", " << d_z << "\n";
+
+    //pose_cmd.header.frame_id.at(5);
+    //std::cout << pose_cmd.header;
     
     //pose_pub.publish(*msg);
     
-
 }
 
 void drone_connection::vel_cmd_cb(const geometry_msgs::Twist::ConstPtr& msg){
-    vel_cmd_import = *msg;
+    vel_cmd_in = *msg;
     
     // To print publishing frequenz:
     // std::cout << std::fixed << std::showpoint;
@@ -126,18 +140,27 @@ void drone_connection::vel_cmd_cb(const geometry_msgs::Twist::ConstPtr& msg){
     // ros_time_last = ros::Time::now(); 
 
     vel_break = true;
-    // vel_cmd_import.linear.z += k_z * (vel_cmd_import.linear.z - curr_pose.twist.twist.linear.z);
-    cmd_vel_unstmpd_pub.publish(vel_cmd_import);
+    // vel_cmd_in.linear.z += k_z * (vel_cmd_in.linear.z - curr_pose.twist.twist.linear.z);
+
+    // vel_cmd_in.linear.z = d_z / (1/20);
+    cmd_vel_unstmpd_pub.publish(vel_cmd_in);
     
+}
+
+double drone_connection::calc_euc_dist(geometry_msgs::Pose pose, geometry_msgs::Pose goal){
+    double x_diff = goal.position.x - pose.position.x, y_diff = goal.position.y - pose.position.y, z_diff = goal.position.z - pose.position.z;
+    double euc_dis = sqrt(x_diff*x_diff+y_diff*y_diff+z_diff*z_diff);
+    return euc_dis;
 }
 
 int drone_connection::take_off()
 {
     //the setpoint publishing rate MUST be faster than 2Hz
     ros::Rate rate50(20.0);
+    ros_time_last = ros::Time::now();
 
     // wait for FCU connection
-    while(ros::ok() && !current_state.connected){
+    while(ros::ok() && !current_mav_state.connected){
 
         ros::spinOnce();
         rate50.sleep();
@@ -149,8 +172,8 @@ int drone_connection::take_off()
     offb_set_mode.request.custom_mode = "OFFBOARD";
     arm_cmd.request.value = true;
     std::cout << "\nMavframe set: "<< set_cmd_vel_frame.call(set_frame_msg) << std::endl;
-    
 
+    
     //send a few setpoints before starting to establish the offboard connection
     for(int i = 50; ros::ok() && i > 0; --i){
         pose_pub.publish(start_pose);
@@ -160,9 +183,10 @@ int drone_connection::take_off()
 
     ros::Time last_request = ros::Time::now();
 
-    bool only_once = false;
+    bool start_hight_reached = false;
+    bool take_off_detected = false;
     while(ros::ok()){
-        if( current_state.mode != "OFFBOARD" &&
+        if( current_mav_state.mode != "OFFBOARD" &&
             (ros::Time::now() - last_request > ros::Duration(5.0))){
             if( set_mode_client.call(offb_set_mode) &&
                 offb_set_mode.response.mode_sent){
@@ -170,7 +194,7 @@ int drone_connection::take_off()
             }
             last_request = ros::Time::now();
         } else {    
-            if( !current_state.armed &&
+            if( !current_mav_state.armed &&
                 (ros::Time::now() - last_request > ros::Duration(5.0))){
                 if( arming_client.call(arm_cmd) &&
                     arm_cmd.response.success){
@@ -180,10 +204,16 @@ int drone_connection::take_off()
             }
         }
 
-        if(curr_pose.pose.pose.position.z >= start_pose.pose.position.z - 0.05 && only_once == false) {
+        if(curr_pose.pose.pose.position.z >= start_pose.pose.position.z - 0.05 && start_hight_reached == false) {
             std::cout << "Start hight reached.\n";
-            only_once = true;
+            start_hight_reached = true;
         }
+        if(curr_pose.pose.pose.position.z >= 0.06 && take_off_detected == false) {
+            std::cout << "Time for Takeoff: "<< ros::Time::now() - ros_time_last << " sec. \n";
+            take_off_detected = true;
+        }
+        
+
 
         pose_pub.publish(start_pose);
 

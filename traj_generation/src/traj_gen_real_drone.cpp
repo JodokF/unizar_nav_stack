@@ -22,6 +22,9 @@ poly_traj_plan::poly_traj_plan(ros::NodeHandle& nh){
         goal.pose.position.x = 0; // 2; 
         goal.pose.position.y = 0; // -1; 
         goal.pose.position.z = 2; // 0.75; 
+        // odom_info.pose.pose.position.x = 0;
+        // odom_info.pose.pose.position.y = 0;
+        // odom_info.pose.pose.position.z = 2;
 
     vel_pub = nh.advertise<geometry_msgs::Twist>
                 ("/vel_cmd_2_drone",10);
@@ -39,8 +42,8 @@ poly_traj_plan::poly_traj_plan(ros::NodeHandle& nh){
                 ("/waypoint_list",10,&poly_traj_plan::planCallback,this);
     path_plan_client = nh.serviceClient<std_srvs::Empty>
                 ("/voxblox_rrt_planner/publish_path");
-    motor_enable_service = nh.serviceClient<hector_uav_msgs::EnableMotors>
-                ("/enable_motors");
+    // motor_enable_service = nh.serviceClient<hector_uav_msgs::EnableMotors>
+    //             ("/enable_motors");
 
     waypoints_received = false;
     odom_received = false;
@@ -226,6 +229,7 @@ int poly_traj_plan::run_navigation_node(){
 
 
     // start_pose is assigened in the odom callback
+    /*
     request.request.start_pose.pose.position.x = odom_info.pose.pose.position.x;
     request.request.start_pose.pose.position.y = odom_info.pose.pose.position.y;
     request.request.start_pose.pose.position.z = odom_info.pose.pose.position.z; 
@@ -234,7 +238,6 @@ int poly_traj_plan::run_navigation_node(){
     request.request.goal_pose.pose.position.y = goal.pose.position.y;
     request.request.goal_pose.pose.position.z = goal.pose.position.z;
 
-    /*
     // requesting voxblox-rrt-planner to plan:
     try {
         if (!ros::service::call(planner_service, request)) {
@@ -285,50 +288,55 @@ bool poly_traj_plan::generate_trajectory() {
         geometry_msgs::Pose pose;
         nav_msgs::Odometry wp0, wp1, wp2, wp3, wp4, wp5, wp6, wp7, wp8; // wp = waypoint, wp0 & wp8 = start & end
     
-        double x_y_vel = 0.1;
+        vel_threshold = 0.8; // geneal vel. limit
+        double x_y_vel = 0.25;
         double z_vel_lin = x_y_vel / 2; 
-        double z_vel_ang = 0;
-        
-        wp1.pose.pose.position.x = 1;
-        wp1.pose.pose.position.y = 1;
-        wp1.pose.pose.position.z = 2.5;
+        double z_vel_ang = 0.3;
+
+        double z_pos = 2;
+    
+        wp1.pose.pose.position.x = 1.22;
+        wp1.pose.pose.position.y = 0.71;
+        wp1.pose.pose.position.z = 2.61;
         wp1.pose.pose.orientation.z = 0; // we use it now as if it were yaw and not a quaternion
         wp1.twist.twist.linear.x = x_y_vel;
         wp1.twist.twist.linear.y = 0; 
         wp1.twist.twist.linear.z = z_vel_lin;
         wp1.twist.twist.angular.z = -z_vel_ang;
-
+    
         wp2.pose.pose.position.x = 2;
         wp2.pose.pose.position.y = 0;
         wp2.pose.pose.position.z = 3;
-        wp2.pose.pose.orientation.z = (3*M_PI)/2; // we use it now as if it were yaw and not a quaternion
+        wp2.pose.pose.orientation.z = ((-M_PI)/2) ; // (3*M_PI)/2; // we use it now as if it were yaw and not a quaternion
         wp2.twist.twist.linear.x = 0;
         wp2.twist.twist.linear.y = -x_y_vel; 
         wp2.twist.twist.linear.z = 0;
         wp2.twist.twist.angular.z = -z_vel_ang;
 
-        wp3.pose.pose.position.x = 1;
-        wp3.pose.pose.position.y = -1;
-        wp3.pose.pose.position.z = 2.5;
-        wp3.pose.pose.orientation.z = M_PI; 
+        wp3.pose.pose.position.x = 1.22;
+        wp3.pose.pose.position.y = -0.71;
+        wp3.pose.pose.position.z = 2.61;
+        wp3.pose.pose.orientation.z = - M_PI; 
         wp3.twist.twist.linear.x = -x_y_vel;
         wp3.twist.twist.linear.y = 0; 
         wp3.twist.twist.linear.z = -z_vel_lin;
         wp3.twist.twist.angular.z = -z_vel_ang;
 
+
         wp4.pose.pose.position.x = 0;
         wp4.pose.pose.position.y = 0;
         wp4.pose.pose.position.z = 2;
-        wp4.pose.pose.orientation.z = (3*M_PI)/4; 
+        wp4.pose.pose.orientation.z = (-5*M_PI)/4; 
         wp4.twist.twist.linear.x = -x_y_vel;
         wp4.twist.twist.linear.y =  x_y_vel; 
         wp4.twist.twist.linear.z = -z_vel_lin;
         wp4.twist.twist.angular.z = 0;
 
-        wp5.pose.pose.position.x = -1;
-        wp5.pose.pose.position.y = 1;
-        wp5.pose.pose.position.z = 1.5;
-        wp5.pose.pose.orientation.z = M_PI; 
+
+        wp5.pose.pose.position.x = -1.22;
+        wp5.pose.pose.position.y = 0.71;
+        wp5.pose.pose.position.z = 1.39;
+        wp5.pose.pose.orientation.z = - M_PI; 
         wp5.twist.twist.linear.x = -x_y_vel;
         wp5.twist.twist.linear.y = 0; 
         wp5.twist.twist.linear.z = -z_vel_lin;
@@ -337,15 +345,15 @@ bool poly_traj_plan::generate_trajectory() {
         wp6.pose.pose.position.x = -2;
         wp6.pose.pose.position.y = 0;
         wp6.pose.pose.position.z = 1;
-        wp6.pose.pose.orientation.z = (3*M_PI)/2; 
+        wp6.pose.pose.orientation.z = (-M_PI)/2; 
         wp6.twist.twist.linear.x = 0;
         wp6.twist.twist.linear.y = -x_y_vel; 
         wp6.twist.twist.linear.z = 0;
         wp6.twist.twist.angular.z = z_vel_ang;
 
-        wp7.pose.pose.position.x = -1;
-        wp7.pose.pose.position.y = -1;
-        wp7.pose.pose.position.z = 1.5;
+        wp7.pose.pose.position.x = -1.22;
+        wp7.pose.pose.position.y = -0.71;
+        wp7.pose.pose.position.z = 1.39;
         wp7.pose.pose.orientation.z = 0; 
         wp7.twist.twist.linear.x = x_y_vel;
         wp7.twist.twist.linear.y = 0; 
@@ -372,7 +380,7 @@ bool poly_traj_plan::generate_trajectory() {
 
 
 /*
-    // insert points between each waypoint to get a stricter trajectory:
+    // insert points between each waypoint of the rrt planer to get a stricter trajectory:
     for(int i = 0; i < 2; i++){
         for (size_t i = 0; i < vxblx_waypoints.poses.size() - 1; ++i) {
             // Calculate the midpoint between the current pose and the next pose
@@ -455,7 +463,6 @@ bool poly_traj_plan::generate_trajectory() {
     // Provide the time constraints on the vertices
     //Automatic time computation 
     std::vector<double> segment_times;
-    vel_threshold = 1;
     const double v_max = vel_threshold; 
     const double a_max = vel_threshold;
     segment_times = estimateSegmentTimes(vertices, v_max, a_max);
@@ -572,7 +579,7 @@ int check_trajectory(){
 
 int main(int argc, char** argv){
     
-    ros::init(argc, argv, "traj_gen_this_name_is_not_used_anywhere_so_nevermind");
+    ros::init(argc, argv, "traj_generator");
     ros::AsyncSpinner ich_spinne(1);
     ich_spinne.start();
     ros::NodeHandle node_handle("~");
