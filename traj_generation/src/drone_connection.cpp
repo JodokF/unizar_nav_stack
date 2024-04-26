@@ -111,7 +111,7 @@ void drone_connection::pose_cb(const nav_msgs::Odometry::ConstPtr& msg){
 
 void drone_connection::pose_cmd_cb(const geometry_msgs::PoseStamped::ConstPtr& msg){
     //pose_cmd_import = *msg;
-    pose_pub.publish(*msg);
+    //pose_pub.publish(*msg);
 
 }
 
@@ -126,7 +126,7 @@ void drone_connection::vel_cmd_cb(const geometry_msgs::Twist::ConstPtr& msg){
 
     vel_break = true;
     // vel_cmd_import.linear.z += k_z * (vel_cmd_import.linear.z - curr_pose.twist.twist.linear.z);
-    //cmd_vel_unstmpd_pub.publish(vel_cmd_import);
+    cmd_vel_unstmpd_pub.publish(vel_cmd_import);
     
 }
 
@@ -160,6 +160,7 @@ int drone_connection::take_off()
     ros::Time last_request = ros::Time::now();
 
     hight_check = false;
+    bool start_hight_reached = false;
     while(ros::ok()){
         if( current_state.mode != "OFFBOARD" &&
             (ros::Time::now() - last_request > ros::Duration(5.0))){
@@ -179,7 +180,10 @@ int drone_connection::take_off()
             }
         }
 
-        if(curr_pose.pose.pose.position.z >= start_pose.pose.position.z) std::cout << "Start hight reached.\n";
+        if(curr_pose.pose.pose.position.z >= start_pose.pose.position.z && start_hight_reached == false){
+            std::cout << "Start height reached.\n";
+            start_hight_reached = true;
+        } 
 
         pose_pub.publish(start_pose);
 

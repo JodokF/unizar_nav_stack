@@ -478,7 +478,7 @@ int poly_traj_plan::run_navigation_node(){
 
 int main(int argc, char** argv){
     
-    ros::init(argc, argv, "traj_gen_this_name_is_not_used_anywhere_so_nevermind");
+    ros::init(argc, argv, "traj_gen_sim");
     ros::AsyncSpinner ich_spinne(1);
     ich_spinne.start();
     ros::NodeHandle node_handle("~");
