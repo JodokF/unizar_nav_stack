@@ -505,7 +505,7 @@ bool poly_traj_plan::generate_trajectory() {
 
 void poly_traj_plan::send_vel_commands() {
     
-    if(curr_state <= traj_states.size()){ 
+    if(curr_state + 1 <= traj_states.size()){  // + 1 because if not it sends one 0 0 0 pose...
         cmd_vel.linear.x = traj_states[curr_state].velocity_W.x();
         cmd_vel.linear.y = traj_states[curr_state].velocity_W.y();
         cmd_vel.linear.z = traj_states[curr_state].velocity_W.z();
