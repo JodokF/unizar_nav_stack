@@ -8,7 +8,7 @@
     <arg name="z" default="2"/>
     <arg name="R" default="0"/>
     <arg name="P" default="0"/>
-    <arg name="Y" default="0"/>
+    <arg name="Y" default="0.7854"/> <!-- = 45 grad = PI / 4  -->
     
     <!-- Drone connection--> 
  

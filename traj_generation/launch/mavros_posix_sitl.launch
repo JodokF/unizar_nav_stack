@@ -8,7 +8,7 @@
     <arg name="z" default="0"/>
     <arg name="R" default="0"/>
     <arg name="P" default="0"/>
-    <arg name="Y" default="0.7854"/> <!-- 0.7854 = PI / 4 -->
+    <arg name="Y" default="0.7854"/> <!-- 0.7854 = PI / 4 = 45 grad-->
     <!-- vehicle model and world -->
     <arg name="est" default="ekf2"/>
     <arg name="vehicle" default="iris"/>
@@ -54,7 +54,7 @@
 
     <!-- <node pkg="tf2_ros" type="static_transform_publisher" name="map2baseLink_broadcast" args="0 0 0 0 0 0 odom base_link" /> -->
     <!-- <node pkg="tf" type="static_transform_publisher" name="odom2base_link" args="$0 0 0 0 0 0 odom base_link 100" /> -->
-    <node pkg="tf" type="static_transform_publisher" name="map2odom" args="0 0 0 0 0 0 map odom 100" />
+    <node pkg="tf" type="static_transform_publisher" name="map2odom" args="$0 0 0 0 0 0 map odom 100" />
 
 
   <!-- paint the drone trajectory in rviz-->

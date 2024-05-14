@@ -41,13 +41,12 @@ class drone_connection
         nav_msgs::Odometry curr_pose;
         geometry_msgs::Twist vel_cmd_in, vel_cmd_send;
         geometry_msgs::PoseStamped pose_cmd_in;
-        geometry_msgs::Pose error_pose;
+        geometry_msgs::Pose error_pose, takeoff;
         ros::Time ros_time_last, ros_time_now;
         ros::Duration passed_time;
 
         double k_x, k_y, k_z;
-        double x_takeoff, y_takeoff, z_takeoff;
-
+        
         double time_last;
         double vel_calc_x, vel_calc_y, vel_calc_z;
 
@@ -65,9 +64,12 @@ drone_connection::drone_connection(ros::NodeHandle& nh)
     /* --- Parameter from launch file---*/
     //   declare the variables to read from param
     //   Read the take-off pose
-    nh.getParam("/drone_connection_node/x_takeoff", x_takeoff);
-    nh.getParam("/drone_connection_node/y_takeoff", y_takeoff);
-    nh.getParam("/drone_connection_node/z_takeoff", z_takeoff);
+    nh.getParam("/drone_connection_node/x_takeoff", takeoff.position.x);
+    nh.getParam("/drone_connection_node/y_takeoff", takeoff.position.y);
+    nh.getParam("/drone_connection_node/z_takeoff", takeoff.position.z);
+    nh.getParam("/drone_connection_node/R_takeoff", takeoff.orientation.x); // saved as RPY not Quaternion
+    nh.getParam("/drone_connection_node/P_takeoff", takeoff.orientation.y); // saved as RPY not Quaternion
+    nh.getParam("/drone_connection_node/Y_takeoff", takeoff.orientation.z); // saved as RPY not Quaternion
     
     /* --- Getting CMDS --- */
     vel_cmd_sub = nh.subscribe<geometry_msgs::Twist>
@@ -95,15 +97,19 @@ drone_connection::drone_connection(ros::NodeHandle& nh)
     
     /* --- Other STUFF --- */
     error_pub = nh.advertise<geometry_msgs::Pose>
-        ("/error_setpoint_real", 10);
+        ("/error_setpoint_and_real", 10);
 
-    start_pose.pose.position.x = x_takeoff; // -1
-    start_pose.pose.position.y = y_takeoff; // 2
-    start_pose.pose.position.z = z_takeoff; // 1.2
-    start_pose.pose.orientation.x = 0;
-    start_pose.pose.orientation.y = 0;
-    start_pose.pose.orientation.z = 0.383; // = 45 degree in z
-    start_pose.pose.orientation.w = 0.924; // = 45 degree in z
+    start_pose.pose.position.x = takeoff.position.x; // -1
+    start_pose.pose.position.y = takeoff.position.y; // 2
+    start_pose.pose.position.z = takeoff.position.z; // 1.2
+
+    tf2::Quaternion quaternion;
+    quaternion.setRPY(takeoff.orientation.x, takeoff.orientation.y, takeoff.orientation.z);
+
+    start_pose.pose.orientation.x = quaternion.getX();
+    start_pose.pose.orientation.y = quaternion.getY();
+    start_pose.pose.orientation.z = quaternion.getZ();
+    start_pose.pose.orientation.w = quaternion.getW(); 
    
     vel_cmd_received = false;
     pose_cmd_received = false;
@@ -134,16 +140,16 @@ void drone_connection::pose_cb(const nav_msgs::Odometry::ConstPtr& msg){
     {
         passed_time = ros::Time::now() - ros_time_last; // = 0.052 sec = aprx. 20 hz
 
-        vel_calc_x = k_x * (error_pose.position.x / passed_time.toSec());
-        vel_calc_y = k_y * (error_pose.position.y / passed_time.toSec());
+        // calc k controller values:
+        vel_calc_x = k_x * (error_pose.position.x / passed_time.toSec()); // not working really good...
+        vel_calc_y = k_y * (error_pose.position.y / passed_time.toSec()); // not working really good...
         vel_calc_z = k_z * (error_pose.position.z / passed_time.toSec());
-
 
         std::cout << "calculated vel.: "<< vel_calc_x << std::endl;
         std::cout << "real vel.:       "<< vel_cmd_in.linear.z << "\n---\n";
         
-
-        vel_cmd_send.linear.x = vel_cmd_in.linear.x; // vel_calc_x;
+        // get vel. command msg. ready:
+        vel_cmd_send.linear.x = vel_cmd_in.linear.x; // vel_calc_x; 
         vel_cmd_send.linear.y = vel_cmd_in.linear.y; // vel_calc_y;
         vel_cmd_send.linear.z = vel_calc_z; // vel_cmd_in.linear.z; // vel_calc_z;
         vel_cmd_send.angular.x = vel_cmd_in.angular.x;
@@ -164,6 +170,7 @@ void drone_connection::pose_cmd_cb(const geometry_msgs::PoseStamped::ConstPtr& m
     std::cout << std::fixed << std::showpoint;
     std::cout << std::setprecision(3);
 
+    // calc. error:
     error_pose.position.x = pose_cmd_in.pose.position.x - curr_pose.pose.pose.position.x;
     error_pose.position.y = pose_cmd_in.pose.position.y - curr_pose.pose.pose.position.y;
     error_pose.position.z = pose_cmd_in.pose.position.z - curr_pose.pose.pose.position.z;
@@ -172,6 +179,7 @@ void drone_connection::pose_cmd_cb(const geometry_msgs::PoseStamped::ConstPtr& m
     error_pose.orientation.z = pose_cmd_in.pose.orientation.z - curr_pose.pose.pose.orientation.z;
     error_pose.orientation.w = pose_cmd_in.pose.orientation.w - curr_pose.pose.pose.orientation.w; 
 
+    // to record rosbag from error:
     error_pub.publish(error_pose);
 
     std::cout << "Error x, y, z: "  << error_pose.position.x << ", " 
