@@ -46,6 +46,7 @@ class drone_connection
         ros::Duration passed_time;
 
         double k_x, k_y, k_z;
+        double x_takeoff, y_takeoff, z_takeoff;
 
         double time_last;
         double vel_calc_x, vel_calc_y, vel_calc_z;
@@ -61,6 +62,13 @@ class drone_connection
 drone_connection::drone_connection(ros::NodeHandle& nh)
 {
 
+    /* --- Parameter from launch file---*/
+    //   declare the variables to read from param
+    //   Read the take-off pose
+    nh.getParam("/drone_connection_node/x_takeoff", x_takeoff);
+    nh.getParam("/drone_connection_node/y_takeoff", y_takeoff);
+    nh.getParam("/drone_connection_node/z_takeoff", z_takeoff);
+    
     /* --- Getting CMDS --- */
     vel_cmd_sub = nh.subscribe<geometry_msgs::Twist>
         ("/vel_cmd_2_drone", 10, &drone_connection::vel_cmd_cb, this);
@@ -89,9 +97,9 @@ drone_connection::drone_connection(ros::NodeHandle& nh)
     error_pub = nh.advertise<geometry_msgs::Pose>
         ("/error_setpoint_real", 10);
 
-    start_pose.pose.position.x = 0; // -1
-    start_pose.pose.position.y = 0; // 2
-    start_pose.pose.position.z = 2.1; // 1.2
+    start_pose.pose.position.x = x_takeoff; // -1
+    start_pose.pose.position.y = y_takeoff; // 2
+    start_pose.pose.position.z = z_takeoff; // 1.2
     start_pose.pose.orientation.x = 0;
     start_pose.pose.orientation.y = 0;
     start_pose.pose.orientation.z = 0.383; // = 45 degree in z
@@ -142,7 +150,6 @@ void drone_connection::pose_cb(const nav_msgs::Odometry::ConstPtr& msg){
         vel_cmd_send.angular.y = vel_cmd_in.angular.y;
         vel_cmd_send.angular.z = vel_cmd_in.angular.z;
         
-        
         ros_time_last = ros::Time::now();
 
         cmd_vel_unstmpd_pub.publish(vel_cmd_send);
@@ -166,7 +173,6 @@ void drone_connection::pose_cmd_cb(const geometry_msgs::PoseStamped::ConstPtr& m
     error_pose.orientation.w = pose_cmd_in.pose.orientation.w - curr_pose.pose.pose.orientation.w; 
 
     error_pub.publish(error_pose);
-
 
     std::cout << "Error x, y, z: "  << error_pose.position.x << ", " 
                                     << error_pose.position.y << ", "

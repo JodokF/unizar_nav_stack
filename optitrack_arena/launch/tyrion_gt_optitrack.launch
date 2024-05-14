@@ -1,5 +1,8 @@
+<!-- original from Jorge -->
+
 <launch>
 <!-- vim: set ft=xml noet : -->
+
 
   <arg name="server" default="192.168.0.100"/>
 
@@ -8,8 +11,8 @@
       server: $(arg server)
       port: 3883
 
-      update_frequency: 10.0
-      frame_id: odom <!-- odom_ned -->
+      update_frequency: 100.0
+      frame_id: odom # odom_ned
 
       # Use the VRPN server's time, or the client's ROS time.
       use_server_time: false
@@ -18,23 +21,16 @@
       # Must either specify refresh frequency > 0.0, or a list of trackers to create
       #refresh_tracker_frequency: 1.0
       trackers:
-      #- dummy
-      #- base_link
+      - base_link
       - goal_optitrack
-      #- calibration_base
-      - cine_mpc
       - GoPro
+      #- calibration_base
+      #- CineMPC
     </rosparam>
-    <remap from="/vrpn_client_node/cine_mpc/pose" to="/optitrack/pose" />
+   <remap from="/vrpn_client_node/base_link/pose" to="/optitrack/pose"/>
   </node>
 
   <!-- Node to change the tf of the pose given by optitrack to match it with mavros-->
   <node pkg="optitrack_arena" type="optitrack_pose_tf" name="optitrack_pose_tf" output="screen"/>
-
-  <!-- TF map <=> odom -->
-  <node pkg="tf" type="static_transform_publisher" name="broadcaster_odom_ned" args="$0 0 0 3.14 0 0 odom odom_ned 100" />
-
-  <!-- TF map <=> odom -->
-  <node pkg="tf" type="static_transform_publisher" name="broadcaster_odom" args="0 0 0 0 0 0 map_ned odom 100" />
 
 </launch>

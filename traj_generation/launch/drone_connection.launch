@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<launch>
+
+    <!--ARGUMENTS-->
+    <!-- take-off and fly to (WRT ODOM FRAME, this is the starting pose of the drone) -->
+    <arg name="x" default="0"/>
+    <arg name="y" default="0"/>
+    <arg name="z" default="2"/>
+    <arg name="R" default="0"/>
+    <arg name="P" default="0"/>
+    <arg name="Y" default="0"/>
+    
+    <!-- Drone connection--> 
+ 
+    <node pkg="traj_generation" type="drone_connection" name="drone_connection_node" output="screen" >
+
+      <param name="x_takeoff" value="$(arg x)" />
+      <param name="y_takeoff" value="$(arg y)" />
+      <param name="z_takeoff" value="$(arg z)" />
+      <param name="R_takeoff" value="$(arg R)" />
+      <param name="P_takeoff" value="$(arg P)" />
+      <param name="Y_takeoff" value="$(arg Y)" />
+      
+    </node>
+
+    
+
+</launch>

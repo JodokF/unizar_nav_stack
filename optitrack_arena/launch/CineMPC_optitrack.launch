@@ -2,6 +2,11 @@
 <!-- vim: set ft=xml noet : -->
 
   <arg name="server" default="192.168.0.100"/>
+    <!-- Configurations -->s
+  <arg name="X0" default="0.0"/>
+  <arg name="Y0" default="0.0"/>
+  <arg name="Z0" default="0.0"/>
+  <arg name="yaw0" default="0.0"/>
 
   <node pkg="vrpn_client_ros" type="vrpn_client_node" name="vrpn_client_node" output="screen">
     <rosparam subst_value="true">
@@ -20,7 +25,7 @@
       trackers:
       #- dummy
       #- base_link
-      - goal_optitrack
+      #- goal_optitrack
       #- calibration_base
       - cine_mpc
     </rosparam>
@@ -29,22 +34,27 @@
 
   <!-- Node to change the tf of the pose given by optitrack to match it with mavros-->
   <node pkg="optitrack_arena" type="optitrack_pose_tf" name="optitrack_pose_tf" output="screen"/>
-  <remap from="/mavros/vision_pose/pose" to="/ned_pose" />
+
   <!-- TF map <=> odom -->
+  <node pkg="tf" type="static_transform_publisher" name="broadcaster_map_ned" args="$0 0 0 3.14 0 0 map map_ned 100" />
   
-  <node pkg="tf" type="static_transform_publisher" name="broadcaster_odom" args="$0 0 0 0 0 0 map odom 100" />
+  <!-- TF map <=> odom -->
+  <node pkg="tf" type="static_transform_publisher" name="broadcaster_odom" args="$(arg X0) $(arg Y0) $(arg Z0) $(arg yaw0) 0 0 map_ned odom 100" />
 
-  <node pkg="tf" type="static_transform_publisher" name="odom_ned" args="$0 0 0 0 0 0 odom odom_ned 100" />
-  
+  <!-- TF map <=> odom -->
+  <node pkg="tf" type="static_transform_publisher" name="broadcaster_odom_ned" args="$0 0 0 3.14 0 0 odom odom_ned 100" />
 
-  <!-- paint the drone trajectory in rviz-->
+  <!-- TF dummy <=> base_link -->
+  <node pkg="tf" type="static_transform_publisher" name="broadcaster_cineMPC_baselink" args="$0 0 0 0 0 0 cine_mpc base_link 100" />
+
+
+
   <node pkg="hector_trajectory_server" type="hector_trajectory_server" name="trajectory_server_loam" ns="gt" >
-      <param name="/target_frame_name" value="odom" />
-      <param name="/source_frame_name" value="cine_mpc" />
-      <param name="/trajectory_update_rate" value="10.0" />
-      <param name="/trajectory_publish_rate" value="10.0" />
+        <param name="/target_frame_name" value="odom" />
+        <param name="/source_frame_name" value="cine_mpc" />
+        <param name="/trajectory_update_rate" value="10.0" />
+        <param name="/trajectory_publish_rate" value="10.0" />
   </node>
-
 
 
 
