@@ -15,7 +15,8 @@ class drone_connection
 {
     private:
         void mavros_state_cb(const mavros_msgs::State::ConstPtr& msg);
-        void pose_cb(const nav_msgs::Odometry::ConstPtr& msg);
+        void sim_pose_cb(const nav_msgs::Odometry::ConstPtr& msg);
+        void real_pose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg);
         void vel_cmd_cb(const geometry_msgs::Twist::ConstPtr& msg);
         void pose_cmd_cb(const geometry_msgs::PoseStamped::ConstPtr& msg);
         double calc_euc_dist(geometry_msgs::Pose pose, geometry_msgs::Pose goal);
@@ -23,16 +24,17 @@ class drone_connection
         ros::Subscriber state_sub;
         ros::Subscriber vel_cmd_sub;
         ros::Subscriber pose_cmd_sub;
+        ros::Subscriber pose_sub_sim;
+        ros::Subscriber pose_sub_real;
         ros::Publisher pose_pub;
         ros::Publisher error_pub;
+        ros::Publisher cmd_vel_unstmpd_pub;
         ros::ServiceClient arming_client;
         ros::ServiceClient set_mode_client;
-        ros::Publisher cmd_vel_unstmpd_pub;
-        ros::Subscriber pose_sub;
+        
+        
         ros::ServiceClient set_cmd_vel_frame;
         
-        geometry_msgs::PoseStamped start_pose;
-
         mavros_msgs::SetMavFrame set_frame_msg;
         mavros_msgs::SetMode offb_set_mode;
         mavros_msgs::CommandBool arm_cmd;
@@ -40,7 +42,7 @@ class drone_connection
         mavros_msgs::State current_mav_state;
         nav_msgs::Odometry curr_pose;
         geometry_msgs::Twist vel_cmd_in, vel_cmd_send;
-        geometry_msgs::PoseStamped pose_cmd_in;
+        geometry_msgs::PoseStamped pose_cmd_in, curr_real_pose;
         geometry_msgs::Pose error_pose, takeoff;
         ros::Time ros_time_last, ros_time_now;
         ros::Duration passed_time;
@@ -49,9 +51,11 @@ class drone_connection
         
         double time_last;
         double vel_calc_x, vel_calc_y, vel_calc_z;
+        bool vel_anomalie_detected;
 
 
     public:
+        geometry_msgs::PoseStamped start_pose;
         bool vel_cmd_received, pose_cmd_received;
         int take_off();
         drone_connection(ros::NodeHandle& nh);
@@ -76,8 +80,10 @@ drone_connection::drone_connection(ros::NodeHandle& nh)
         ("/vel_cmd_2_drone", 10, &drone_connection::vel_cmd_cb, this);
     pose_cmd_sub = nh.subscribe<geometry_msgs::PoseStamped>
         ("/pose_cmd_2_drone", 10, &drone_connection::pose_cmd_cb, this);
-    pose_sub = nh.subscribe<nav_msgs::Odometry>
-        ("/mavros/odometry/out", 10, &drone_connection::pose_cb,this);        
+    pose_sub_sim = nh.subscribe<nav_msgs::Odometry>
+        ("/mavros/odometry/out", 10, &drone_connection::sim_pose_cb,this);        
+    pose_sub_real = nh.subscribe<geometry_msgs::PoseStamped>
+        ("/optitrack/pose", 10, &drone_connection::real_pose_cb,this);  
     
     /* --- Sending CMDS to Drone --- */
     pose_pub = nh.advertise<geometry_msgs::PoseStamped>
@@ -113,14 +119,15 @@ drone_connection::drone_connection(ros::NodeHandle& nh)
    
     vel_cmd_received = false;
     pose_cmd_received = false;
+    vel_anomalie_detected = false;
     vel_calc_x = 0;
     vel_calc_y = 0;
     vel_calc_z = 0;
     k_x = 0.08;
     k_y = 0.3;
     k_z = 0.3;
-    
 
+    
     ros_time_last = ros::Time::now(); 
 
 }
@@ -133,8 +140,10 @@ void drone_connection::mavros_state_cb(const mavros_msgs::State::ConstPtr& msg){
     current_mav_state = *msg;
 }
 
-void drone_connection::pose_cb(const nav_msgs::Odometry::ConstPtr& msg){
+void drone_connection::sim_pose_cb(const nav_msgs::Odometry::ConstPtr& msg){
     curr_pose = *msg;
+
+    std::cout << "This is not opened righ now?!!\n";
 
     if (pose_cmd_received == true)
     {
@@ -149,17 +158,20 @@ void drone_connection::pose_cb(const nav_msgs::Odometry::ConstPtr& msg){
         std::cout << "real vel.:       "<< vel_cmd_in.linear.z << "\n---\n";
         
         // get vel. command msg. ready:
-        vel_cmd_send.linear.x = vel_cmd_in.linear.x; // vel_calc_x; 
-        vel_cmd_send.linear.y = vel_cmd_in.linear.y; // vel_calc_y;
-        vel_cmd_send.linear.z = vel_calc_z; // vel_cmd_in.linear.z; // vel_calc_z;
-        vel_cmd_send.angular.x = vel_cmd_in.angular.x;
-        vel_cmd_send.angular.y = vel_cmd_in.angular.y;
-        vel_cmd_send.angular.z = vel_cmd_in.angular.z;
+        vel_cmd_send = vel_cmd_in;
+        //vel_cmd_send.linear.x = vel_calc_x; 
+        //vel_cmd_send.linear.y = vel_calc_y;
+        vel_cmd_send.linear.z = vel_calc_z; 
         
         ros_time_last = ros::Time::now();
 
         cmd_vel_unstmpd_pub.publish(vel_cmd_send);
     }
+
+}
+
+void drone_connection::real_pose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg){
+    curr_real_pose = *msg;
 
 }
 
@@ -182,9 +194,9 @@ void drone_connection::pose_cmd_cb(const geometry_msgs::PoseStamped::ConstPtr& m
     // to record rosbag from error:
     error_pub.publish(error_pose);
 
-    std::cout << "Error x, y, z: "  << error_pose.position.x << ", " 
-                                    << error_pose.position.y << ", "
-                                    << error_pose.position.z << "\n";
+    // std::cout << "Error x, y, z: "  << error_pose.position.x << ", " 
+    //                                 << error_pose.position.y << ", "
+    //                                 << error_pose.position.z << "\n";
 
     //pose_cmd.header.frame_id.at(5);
     //std::cout << pose_cmd.header;
@@ -196,7 +208,38 @@ void drone_connection::pose_cmd_cb(const geometry_msgs::PoseStamped::ConstPtr& m
 void drone_connection::vel_cmd_cb(const geometry_msgs::Twist::ConstPtr& msg){
     vel_cmd_in = *msg;
     vel_cmd_received = true;
-    
+
+
+    std::cout << "---\nVelocities:\n"   << vel_cmd_in.linear.x << "x; " 
+                                        << vel_cmd_in.linear.y << "y; " 
+                                        << vel_cmd_in.linear.z << "z; \n";
+
+    if (vel_cmd_in.linear.x <  0.35 &&
+        vel_cmd_in.linear.x > -0.35 &&
+        vel_cmd_in.linear.y <  0.35 &&
+        vel_cmd_in.linear.y > -0.35 &&
+        vel_cmd_in.linear.z <  0.35 &&
+        vel_cmd_in.linear.z > -0.35 &&
+        vel_cmd_in.angular.x <  0.35 &&
+        vel_cmd_in.angular.x > -0.35 &&
+        vel_cmd_in.angular.y <  0.35 &&
+        vel_cmd_in.angular.y > -0.35 &&
+        vel_cmd_in.angular.z <  0.35 &&
+        vel_cmd_in.angular.z > -0.35 && 
+        vel_anomalie_detected == false)
+        {
+            cmd_vel_unstmpd_pub.publish(vel_cmd_in);
+    }else{
+        vel_anomalie_detected = true;
+        vel_cmd_in.linear.x = 0.0;
+        vel_cmd_in.linear.y = 0.0;
+        vel_cmd_in.linear.z = 0.0;
+        vel_cmd_in.angular.x = 0.0;
+        vel_cmd_in.angular.y = 0.0;
+        vel_cmd_in.angular.z = 0.0;
+        std::cout << "Velocitie anomalie detected! Sending Veloocity ZERO!\n";
+        cmd_vel_unstmpd_pub.publish(vel_cmd_in);
+    }
 }
 
 double drone_connection::calc_euc_dist(geometry_msgs::Pose pose, geometry_msgs::Pose goal){
@@ -208,73 +251,82 @@ double drone_connection::calc_euc_dist(geometry_msgs::Pose pose, geometry_msgs::
 int drone_connection::take_off()
 {
     //the setpoint publishing rate MUST be faster than 2Hz
-    ros::Rate rate50(20.0);
+    ros::Rate rate20(20.0);
     ros_time_last = ros::Time::now();
 
     // wait for FCU connection
     while(ros::ok() && !current_mav_state.connected){
 
         ros::spinOnce();
-        rate50.sleep();
+        rate20.sleep();
     }
 
     // Set the frame in which the velocties are  interpreted by the drone
     set_frame_msg.request.mav_frame = set_frame_msg.request.FRAME_LOCAL_NED;  // FRAME_LOCAL_NED = world, FRAME_BODY_NED = drone
     offb_set_mode.request.custom_mode = "OFFBOARD";
     arm_cmd.request.value = true;
-    std::cout << "\nMavframe set: "<< set_cmd_vel_frame.call(set_frame_msg) << std::endl;
+    std::cout << "\nMavframe set: ";
+    if(set_cmd_vel_frame.call(set_frame_msg) == 1) std::cout << " true" << std::endl;
+    else std::cout << " false" << std::endl;
 
     
     //send a few setpoints before starting to establish the offboard connection
     for(int i = 50; ros::ok() && i > 0; --i){
         pose_pub.publish(start_pose);
         ros::spinOnce();
-        rate50.sleep();
+        rate20.sleep();
     }
 
     ros::Time last_request = ros::Time::now();
 
     bool start_hight_reached = false;
     bool take_off_detected = false;
+    bool offb_entered = false;  
+    bool armed_once = false;
     while(ros::ok()){
-        if( current_mav_state.mode != "OFFBOARD" &&
-            (ros::Time::now() - last_request > ros::Duration(5.0))){
+        if(  current_mav_state.mode != "OFFBOARD" &&
+            (ros::Time::now() - last_request > ros::Duration(5.0)) &&
+             offb_entered == false){
             if( set_mode_client.call(offb_set_mode) &&
                 offb_set_mode.response.mode_sent){
                 ROS_INFO("Offboard enabled");
+                offb_entered = true; // to ensure that the drone does not enter in the offb mode again after taking the commando with the remote control
             }
             last_request = ros::Time::now();
         } else {    
             if( !current_mav_state.armed &&
-                (ros::Time::now() - last_request > ros::Duration(5.0))){
+               (ros::Time::now() - last_request > ros::Duration(5.0)) &&
+                armed_once == false ){
                 if( arming_client.call(arm_cmd) &&
                     arm_cmd.response.success){
                     ROS_INFO("Vehicle armed");
+                    armed_once = true;
                 }
                 last_request = ros::Time::now();
             }
         }
 
-        if(curr_pose.pose.pose.position.z >= start_pose.pose.position.z - 0.11 && start_hight_reached == false) {
-            std::cout << "Start hight reached.\n";
+        if(curr_real_pose.pose.position.z >= start_pose.pose.position.z - 0.1 && start_hight_reached == false) {
+            ROS_INFO("Start hight reached.");
             start_hight_reached = true;
         }
-        if(curr_pose.pose.pose.position.z >= 0.06 && take_off_detected == false) {
+        // check how long it takes for the takeoff:
+        if(curr_real_pose.pose.position.z >= 0.06 && take_off_detected == false) {
             std::cout << "Time for Takeoff: "<< ros::Time::now() - ros_time_last << " sec. \n";
             take_off_detected = true;
         }
         
-
-
         pose_pub.publish(start_pose);
 
+        // safety first
         if(vel_cmd_sub.getNumPublishers() > 0 && vel_cmd_received == true){
             ROS_INFO("Traj. vel. publisher detected.");
             return 0;
         }
         
+        
         ros::spinOnce();
-        rate50.sleep();
+        rate20.sleep();
     }
     return 0;
 }
@@ -288,6 +340,7 @@ int main(int argc, char **argv)
     ich_spinne.start();
 
     drone_connection drone(std::ref(node_handle));
+    std::cout << "Start pose: \n" << drone.start_pose;
 
     drone.take_off();
 
