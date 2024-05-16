@@ -42,11 +42,13 @@
   <node pkg="tf" type="static_transform_publisher" name="broadcaster_odom" args="$(arg X0) $(arg Y0) $(arg Z0) $(arg yaw0) 0 0 map_ned odom 100" />
 
   <!-- TF map <=> odom -->
-  <node pkg="tf" type="static_transform_publisher" name="broadcaster_odom_ned" args="$0 0 0 3.14 0 0 odom odom_ned 100" />
+  <node pkg="tf" type="static_transform_publisher" name="broadcaster_odom_ned" args="$0 0 0 0 0 0 odom odom_ned 100" />
 
   <!-- TF dummy <=> base_link -->
   <node pkg="tf" type="static_transform_publisher" name="broadcaster_cineMPC_baselink" args="$0 0 0 0 0 0 cine_mpc base_link 100" />
 
+
+  <node name="rviz" pkg="rviz" type="rviz" args="--display-config=/home/cconradi/Documents/catkin_ws/src/nav_stack_cc/traj_generation/cnfg/cnfg_real_drone_flying_ocho.rviz" />
 
 
   <node pkg="hector_trajectory_server" type="hector_trajectory_server" name="trajectory_server_loam" ns="gt" >
