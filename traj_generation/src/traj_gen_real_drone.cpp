@@ -4,24 +4,24 @@
 
 poly_traj_plan::poly_traj_plan(ros::NodeHandle& nh){    
 
-    odom_topic = "/mavros/odometry/out";
-    //odom_topic = "/optitrack/pose"; // = cine_mpc drone pose (when the optitrack launch file is executed)
+    //odom_topic = "/mavros/odometry/out";
+    odom_topic = "/optitrack/pose"; // = cine_mpc drone pose (when the optitrack launch file is executed)
     //goal_topic = "/vrpn_client_node/goal_optitrack/pose";
 
     nh.param("/planner_service", planner_service, std::string("/voxblox_rrt_planner/plan"));
 
-
-    takeoff_altitude = 1;
     nmbr_of_states = 0;
     curr_state = 0;
     waypoint_cntr = 0;
     marker_cntr = 0;
     sampling_interval = 0.05;
+    altitude_factor = 1.0; // to reduce the hight of the flying ocho -> if it is 0 flying high is between 1 and 3 m
+    
 
     // for the simulation: (instead of the optitrack goal)
         goal.pose.position.x = 0; // 2; 
         goal.pose.position.y = 0; // -1; 
-        goal.pose.position.z = 2; // 0.75; 
+        goal.pose.position.z = 2 - altitude_factor; // 0.75; 
         // odom_info.pose.pose.position.x = 0;
         // odom_info.pose.pose.position.y = 0;
         // odom_info.pose.pose.position.z = 2;
@@ -34,8 +34,10 @@ poly_traj_plan::poly_traj_plan(ros::NodeHandle& nh){
                 ("/trajectory_markers", 0);
     marker_pub = nh.advertise<visualization_msgs::MarkerArray>
                 ("/waypoint_markers", 10);
-    pose_sub = nh.subscribe<nav_msgs::Odometry>
-                (odom_topic,10,&poly_traj_plan::poseCallback,this);
+    pose_sub_real = nh.subscribe<geometry_msgs::PoseStamped>
+                ("/optitrack/pose",10,&poly_traj_plan::poseCallbackReal,this);
+    pose_sub_sim = nh.subscribe<nav_msgs::Odometry>
+                ("/mavros/odometry/out",10,&poly_traj_plan::poseCallbackSim,this);
     goal_sub = nh.subscribe<geometry_msgs::PoseStamped>
                 (goal_topic,10,&poly_traj_plan::goalCallback,this);
     plan_sub = nh.subscribe<geometry_msgs::PoseArray>
@@ -76,11 +78,20 @@ void poly_traj_plan::goalCallback(const geometry_msgs::PoseStamped::ConstPtr &ms
 
 }
 
-void poly_traj_plan::poseCallback(const nav_msgs::Odometry::ConstPtr &msg){    
+void poly_traj_plan::poseCallbackSim(const nav_msgs::Odometry::ConstPtr &msg){    
     odom_info = *msg;
     odom_received = true;
     // std::cout << "\n--- odom received ---\n";
     
+}
+
+void poly_traj_plan::poseCallbackReal(const geometry_msgs::PoseStamped::ConstPtr &msg){
+    
+    odom_info.child_frame_id;
+    odom_info.header = msg->header;
+    odom_info.pose.pose = msg->pose;    
+
+    odom_received = true;
 }
 
 geometry_msgs::Pose poly_traj_plan::calculateMidpoint(const geometry_msgs::Pose& pose1, const geometry_msgs::Pose& pose2) {
@@ -288,16 +299,16 @@ bool poly_traj_plan::generate_trajectory() {
         geometry_msgs::Pose pose;
         nav_msgs::Odometry wp0, wp1, wp2, wp3, wp4, wp5, wp6, wp7, wp8; // wp = waypoint, wp0 & wp8 = start & end
     
-        vel_threshold = 0.8; // geneal vel. limit
-        double x_y_vel = 0.25;
-        double z_vel_lin = x_y_vel / 2; 
+        vel_threshold = 0.3;//0.8; // geneal vel. limit
+        double x_y_vel = vel_threshold * 0.3; // worked the best for the flying ocho
+        double z_vel_lin = x_y_vel / 2;       // sets the steepnes of the fyling ocho (right?)
         double z_vel_ang = 0.3;
 
         double z_pos = 2;
     
         wp1.pose.pose.position.x = 1.22;
         wp1.pose.pose.position.y = 0.71;
-        wp1.pose.pose.position.z = 2.61;
+        wp1.pose.pose.position.z = 2.61 - altitude_factor;
         wp1.pose.pose.orientation.z = 0; // we use it now as if it were yaw and not a quaternion
         wp1.twist.twist.linear.x = x_y_vel;
         wp1.twist.twist.linear.y = 0; 
@@ -306,7 +317,7 @@ bool poly_traj_plan::generate_trajectory() {
     
         wp2.pose.pose.position.x = 2;
         wp2.pose.pose.position.y = 0;
-        wp2.pose.pose.position.z = 3;
+        wp2.pose.pose.position.z = 3 - altitude_factor;
         wp2.pose.pose.orientation.z = ((-M_PI)/2) ; // (3*M_PI)/2; // we use it now as if it were yaw and not a quaternion
         wp2.twist.twist.linear.x = 0;
         wp2.twist.twist.linear.y = -x_y_vel; 
@@ -315,27 +326,27 @@ bool poly_traj_plan::generate_trajectory() {
 
         wp3.pose.pose.position.x = 1.22;
         wp3.pose.pose.position.y = -0.71;
-        wp3.pose.pose.position.z = 2.61;
+        wp3.pose.pose.position.z = 2.61 - altitude_factor;
         wp3.pose.pose.orientation.z = - M_PI; 
         wp3.twist.twist.linear.x = -x_y_vel;
         wp3.twist.twist.linear.y = 0; 
         wp3.twist.twist.linear.z = -z_vel_lin;
         wp3.twist.twist.angular.z = -z_vel_ang;
 
-
+        // Middlepoint:
         wp4.pose.pose.position.x = 0;
         wp4.pose.pose.position.y = 0;
-        wp4.pose.pose.position.z = 2;
+        wp4.pose.pose.position.z = 2 - altitude_factor;
         wp4.pose.pose.orientation.z = (-5*M_PI)/4; 
         wp4.twist.twist.linear.x = -x_y_vel;
         wp4.twist.twist.linear.y =  x_y_vel; 
         wp4.twist.twist.linear.z = -z_vel_lin;
         wp4.twist.twist.angular.z = 0;
 
-
+/*
         wp5.pose.pose.position.x = -1.22;
         wp5.pose.pose.position.y = 0.71;
-        wp5.pose.pose.position.z = 1.39;
+        wp5.pose.pose.position.z = 1.39 - altitude_factor;
         wp5.pose.pose.orientation.z = - M_PI; 
         wp5.twist.twist.linear.x = -x_y_vel;
         wp5.twist.twist.linear.y = 0; 
@@ -344,7 +355,7 @@ bool poly_traj_plan::generate_trajectory() {
 
         wp6.pose.pose.position.x = -2;
         wp6.pose.pose.position.y = 0;
-        wp6.pose.pose.position.z = 1;
+        wp6.pose.pose.position.z = 1 - altitude_factor;
         wp6.pose.pose.orientation.z = (-M_PI)/2; 
         wp6.twist.twist.linear.x = 0;
         wp6.twist.twist.linear.y = -x_y_vel; 
@@ -353,14 +364,17 @@ bool poly_traj_plan::generate_trajectory() {
 
         wp7.pose.pose.position.x = -1.22;
         wp7.pose.pose.position.y = -0.71;
-        wp7.pose.pose.position.z = 1.39;
+        wp7.pose.pose.position.z = 1.39 - altitude_factor;
         wp7.pose.pose.orientation.z = 0; 
         wp7.twist.twist.linear.x = x_y_vel;
         wp7.twist.twist.linear.y = 0; 
         wp7.twist.twist.linear.z = z_vel_lin;
         wp7.twist.twist.angular.z = z_vel_ang;
 
-        std::vector<nav_msgs::Odometry> full_eight = {wp0, wp1, wp2, wp3, wp4, wp5, wp6, wp7, wp8};
+*/
+
+
+        std::vector<nav_msgs::Odometry> full_eight = {wp0, wp1, wp2, wp3, wp4}; // wp5, wp6, wp7, wp8};
 
         drawMarkerArray(full_eight, 1, 0);
 
@@ -588,7 +602,7 @@ int main(int argc, char** argv){
 
 
 // debugging to use without voxblox
-//    bool traj_checker = false;
+    bool traj_checker = false;
 //    do{
         // run the navigation node and get the trajectory    
         
@@ -600,18 +614,20 @@ int main(int argc, char** argv){
             return -1;
         }
         
-//        if(check_trajectory() == 0) traj_checker = true;
+       if(check_trajectory() == 0) traj_checker = true;
     
-    
-//    } while (traj_checker == false);
-    
+       
     
     // sending vel commands to the real drone
-    while(ros::ok()){
-        
-        ptp.send_vel_commands();
-        ros::Duration(ptp.sampling_interval).sleep();
-        // ros::Duration(0.05).sleep();
+    if (traj_checker == true)
+    {
+        while(ros::ok()){
+            
+            ptp.send_vel_commands();
+            ros::Duration(ptp.sampling_interval).sleep();
+            // ros::Duration(0.05).sleep();
+        }
+
     }
 
 

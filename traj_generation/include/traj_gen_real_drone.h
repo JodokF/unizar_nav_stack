@@ -49,7 +49,7 @@ class poly_traj_plan{
         bool waypoints_received, odom_received, goal_recieved, planner_service_called;
         int nmbr_of_states, curr_state, waypoint_cntr, marker_cntr;
         
-        ros::Subscriber plan_sub, pose_sub, goal_sub;
+        ros::Subscriber plan_sub, pose_sub_real, pose_sub_sim, goal_sub;
         ros::Publisher vel_pub, mav_traj_markers_pub, marker_pub, pose_pub;
         std::string odom_topic, default_odom_topic, goal_topic, default_goal_topic, planner_service;
 
@@ -68,6 +68,8 @@ class poly_traj_plan{
         ros::ServiceClient motor_enable_service; 
         ros::ServiceClient path_plan_client;
 
+        double altitude_factor;
+
         struct flying_eight {
             double x;
             double y;
@@ -78,7 +80,8 @@ class poly_traj_plan{
 
 
         // functions:
-        void poseCallback(const nav_msgs::Odometry::ConstPtr &msg);
+        void poseCallbackSim(const nav_msgs::Odometry::ConstPtr &msg);
+        void poseCallbackReal(const geometry_msgs::PoseStamped::ConstPtr &msg);
         void planCallback(const geometry_msgs::PoseArray::ConstPtr &msg);
         void goalCallback(const geometry_msgs::PoseStamped::ConstPtr &msg);
         void drawMAVTrajectoryMarkers();
