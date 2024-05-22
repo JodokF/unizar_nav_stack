@@ -51,12 +51,6 @@
   <node name="rviz" pkg="rviz" type="rviz" args="--display-config=/home/cconradi/Documents/catkin_ws/src/nav_stack_cc/traj_generation/cnfg/cnfg_real_drone_flying_ocho.rviz" />
 
 
-  <node pkg="hector_trajectory_server" type="hector_trajectory_server" name="trajectory_server_loam" ns="gt" >
-        <param name="/target_frame_name" value="odom" />
-        <param name="/source_frame_name" value="cine_mpc" />
-        <param name="/trajectory_update_rate" value="10.0" />
-        <param name="/trajectory_publish_rate" value="10.0" />
-  </node>
 
 
 
