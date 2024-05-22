@@ -3,12 +3,15 @@
 
     <!--ARGUMENTS-->
     <!-- take-off and fly to (WRT ODOM FRAME, this is the starting pose of the drone) -->
-    <arg name="x" default="0"/>
+    <arg name="x" default="-1"/>
     <arg name="y" default="0"/>
     <arg name="z" default="1"/>
     <arg name="R" default="0"/>
     <arg name="P" default="0"/>
-    <arg name="Y" default="0"/> <!-- 0.7854 = 45 grad = PI / 4  -->
+    <arg name="Y" default="0.7854"/> <!-- 0.7854 = 45 grad = PI / 4  -->
+
+    <arg name="cntrl" default="true"/>
+    <arg name="simulation" default="false"/>
     
     <!-- Drone connection--> 
  
@@ -20,8 +23,21 @@
       <param name="R_takeoff" value="$(arg R)" />
       <param name="P_takeoff" value="$(arg P)" />
       <param name="Y_takeoff" value="$(arg Y)" />
+
+      <param name="use_cntrl" value="$(arg cntrl)" />
       
     </node>
+
+
+
+  <node pkg="hector_trajectory_server" type="hector_trajectory_server" name="trajectory_server_loam" ns="gt" >
+        <param name="/target_frame_name" value="odom" />
+        <param name="/trajectory_update_rate" value="10.0" />
+        <param name="/trajectory_publish_rate" value="10.0" />
+
+        <param name="/source_frame_name" value="base_link" if="$(arg simulation)" />
+        <param name="/source_frame_name" value="cine_mpc" unless="$(arg simulation)" />
+  </node>
 
     
 
