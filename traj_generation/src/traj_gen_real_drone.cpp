@@ -15,11 +15,12 @@ poly_traj_plan::poly_traj_plan(ros::NodeHandle& nh){
     waypoint_cntr = 0;
     marker_cntr = 0;
     sampling_interval = 0.05;
-    altitude_factor = 1.0; // to reduce the hight of the flying ocho -> if it is 0 flying high is between 1 and 3 m
+    altitude_factor = 1; // to reduce the hight of the flying ocho -> if it is 0 flying high is between 1 and 3 m
+    x_offset = 1.0;
     
 
     // for the simulation: (instead of the optitrack goal)
-        goal.pose.position.x = 0; // 2; 
+        goal.pose.position.x = 0 - x_offset; // 2; 
         goal.pose.position.y = 0; // -1; 
         goal.pose.position.z = 2 - altitude_factor; // 0.75; 
         // odom_info.pose.pose.position.x = 0;
@@ -306,7 +307,7 @@ bool poly_traj_plan::generate_trajectory() {
 
         double z_pos = 2;
     
-        wp1.pose.pose.position.x = 1.22;
+        wp1.pose.pose.position.x = 1.22 - x_offset;
         wp1.pose.pose.position.y = 0.71;
         wp1.pose.pose.position.z = 2.61 - altitude_factor;
         wp1.pose.pose.orientation.z = 0; // we use it now as if it were yaw and not a quaternion
@@ -315,7 +316,7 @@ bool poly_traj_plan::generate_trajectory() {
         wp1.twist.twist.linear.z = z_vel_lin;
         wp1.twist.twist.angular.z = -z_vel_ang;
     
-        wp2.pose.pose.position.x = 2;
+        wp2.pose.pose.position.x = 2 - x_offset;
         wp2.pose.pose.position.y = 0;
         wp2.pose.pose.position.z = 3 - altitude_factor;
         wp2.pose.pose.orientation.z = ((-M_PI)/2) ; // (3*M_PI)/2; // we use it now as if it were yaw and not a quaternion
@@ -324,7 +325,7 @@ bool poly_traj_plan::generate_trajectory() {
         wp2.twist.twist.linear.z = 0;
         wp2.twist.twist.angular.z = -z_vel_ang;
 
-        wp3.pose.pose.position.x = 1.22;
+        wp3.pose.pose.position.x = 1.22 - x_offset;
         wp3.pose.pose.position.y = -0.71;
         wp3.pose.pose.position.z = 2.61 - altitude_factor;
         wp3.pose.pose.orientation.z = - M_PI; 
@@ -334,7 +335,7 @@ bool poly_traj_plan::generate_trajectory() {
         wp3.twist.twist.angular.z = -z_vel_ang;
 
         // Middlepoint:
-        wp4.pose.pose.position.x = 0;
+        wp4.pose.pose.position.x = 0 - x_offset;
         wp4.pose.pose.position.y = 0;
         wp4.pose.pose.position.z = 2 - altitude_factor;
         wp4.pose.pose.orientation.z = (-5*M_PI)/4; 

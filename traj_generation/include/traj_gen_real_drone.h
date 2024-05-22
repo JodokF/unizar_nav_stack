@@ -68,7 +68,7 @@ class poly_traj_plan{
         ros::ServiceClient motor_enable_service; 
         ros::ServiceClient path_plan_client;
 
-        double altitude_factor;
+        double altitude_factor, x_offset;
 
         struct flying_eight {
             double x;
