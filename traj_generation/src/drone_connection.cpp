@@ -221,7 +221,7 @@ void drone_connection::calc_cntrl_vel(){
         //std::cout << "real vel.:       "<< vel_cmd_in.linear.z << "\n---\n";
         
         // get vel. command msg. ready:
-        vel_cmd_send = vel_cmd_in;
+        // vel_cmd_send = vel_cmd_in; not necessary any more since it is done directly in the cb function -> delete comment if checked
 
         //vel_cmd_send.linear.x = vel_calc_x; 
         //vel_cmd_send.linear.y = vel_calc_y;
