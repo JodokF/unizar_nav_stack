@@ -32,9 +32,6 @@ include_directories(
     # Add any other include directories here
 )
 
-add_executable(traj_generation_sim src/traj_gen_sim.cpp)
-add_dependencies(traj_generation_sim ${catkin_EXPORTED_TARGETS})
-target_link_libraries(traj_generation_sim ${catkin_LIBRARIES})# Eigen3::Eigen)
 
 add_executable(traj_generation_real_drone src/traj_gen_real_drone.cpp)
 add_dependencies(traj_generation_real_drone ${catkin_EXPORTED_TARGETS})
