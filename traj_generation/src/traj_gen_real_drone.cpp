@@ -319,7 +319,7 @@ bool poly_traj_plan::generate_trajectory() {
         wp2.pose.pose.position.x = 2 - x_offset;
         wp2.pose.pose.position.y = 0;
         wp2.pose.pose.position.z = 3 - altitude_factor;
-        wp2.pose.pose.orientation.z = ((-M_PI)/2) ; // (3*M_PI)/2; // we use it now as if it were yaw and not a quaternion
+        wp2.pose.pose.orientation.z = ((-M_PI)/2) ; // we use it now as if it were yaw and not a quaternion
         wp2.twist.twist.linear.x = 0;
         wp2.twist.twist.linear.y = -x_y_vel; 
         wp2.twist.twist.linear.z = 0;
@@ -338,7 +338,7 @@ bool poly_traj_plan::generate_trajectory() {
         wp4.pose.pose.position.x = 0 - x_offset;
         wp4.pose.pose.position.y = 0;
         wp4.pose.pose.position.z = 2 - altitude_factor;
-        wp4.pose.pose.orientation.z = (-5*M_PI)/4; 
+        wp4.pose.pose.orientation.z = -(5*M_PI)/4; 
         wp4.twist.twist.linear.x = -x_y_vel;
         wp4.twist.twist.linear.y =  x_y_vel; 
         wp4.twist.twist.linear.z = -z_vel_lin;
@@ -375,7 +375,7 @@ bool poly_traj_plan::generate_trajectory() {
 */
 
 
-        std::vector<nav_msgs::Odometry> full_eight = {wp0, wp1, wp2, wp3, wp4}; // wp5, wp6, wp7, wp8};
+        std::vector<nav_msgs::Odometry> full_eight = {wp0, wp1, wp2, wp3, wp4}; //  wp5, wp6, wp7, wp8};
 
         drawMarkerArray(full_eight, 1, 0);
 
@@ -434,7 +434,7 @@ bool poly_traj_plan::generate_trajectory() {
         // Add the position constraint for the waypoint
         middle_points.addConstraint(mav_trajectory_generation::derivative_order::POSITION, pose_cnstr);
 
-        Eigen::Vector4d vel_cnstr( waypoint.twist.twist.linear.x,
+        Eigen::Vector4d vel_cnstr(  waypoint.twist.twist.linear.x,
                                     waypoint.twist.twist.linear.y,
                                     waypoint.twist.twist.linear.z,
                                     waypoint.twist.twist.angular.z); 
@@ -465,7 +465,7 @@ bool poly_traj_plan::generate_trajectory() {
     end.makeStartOrEnd(Eigen::Vector4d( goal.pose.position.x,
                                         goal.pose.position.y,
                                         goal.pose.position.z, 
-                                        M_PI/4), 
+                                        -(5*M_PI)/4), // M_PI/4), 
                                         derivative_to_optimize);
     vertices.push_back(end);
     std::cout << "Goal for traj. x, y, z: \t" << goal.pose.position.x << ", " 

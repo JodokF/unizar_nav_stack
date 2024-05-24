@@ -29,7 +29,6 @@
     </node>
 
 
-
   <node pkg="hector_trajectory_server" type="hector_trajectory_server" name="trajectory_server_loam" ns="gt" >
         <param name="/target_frame_name" value="odom" />
         <param name="/trajectory_update_rate" value="10.0" />

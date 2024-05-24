@@ -12,8 +12,8 @@
 #include "std_msgs/Float64.h"
 
 
-class drone_connection
-{
+class drone_connection{
+
     private:
         void mavros_state_cb(const mavros_msgs::State::ConstPtr& msg);
         void sim_pose_cb(const nav_msgs::Odometry::ConstPtr& msg);
@@ -21,6 +21,8 @@ class drone_connection
         void vel_cmd_cb(const geometry_msgs::Twist::ConstPtr& msg);
         void pose_cmd_cb(const geometry_msgs::PoseStamped::ConstPtr& msg);
         double calc_euc_dist(geometry_msgs::Pose pose, geometry_msgs::Pose goal);
+        double get_yaw_difference(double from, double to);
+
         
         ros::Subscriber state_sub;
         ros::Subscriber vel_cmd_sub;
@@ -33,21 +35,24 @@ class drone_connection
 
     /**************** PID Stuff: ****************/
         
-        ros::Publisher x_pos_pid_setp_pub, x_pos_pid_state_pub;
-        ros::Publisher y_pos_pid_setp_pub, y_pos_pid_state_pub;        
-        ros::Publisher z_pos_pid_setp_pub, z_pos_pid_state_pub;  
+        ros::Publisher x_pid_setp_pub, x_pid_state_pub;
+        ros::Publisher y_pid_setp_pub, y_pid_state_pub;        
+        ros::Publisher z_pid_setp_pub, z_pid_state_pub; 
+        ros::Publisher yaw_pid_setp_pub, yaw_pid_state_pub; 
 
-        ros::Subscriber x_pos_pid_out_sub, y_pos_pid_out_sub, z_pos_pid_out_sub;
+        ros::Subscriber x_pid_out_sub, y_pid_out_sub, z_pid_out_sub, yaw_pid_out_sub;
 
-        void x_pos_pid_cb(const std_msgs::Float64::ConstPtr& msg);
-        void y_pos_pid_cb(const std_msgs::Float64::ConstPtr& msg);
-        void z_pos_pid_cb(const std_msgs::Float64::ConstPtr& msg);
+        void x_pid_cb(const std_msgs::Float64::ConstPtr& msg);
+        void y_pid_cb(const std_msgs::Float64::ConstPtr& msg);
+        void z_pid_cb(const std_msgs::Float64::ConstPtr& msg);
+        void yaw_pid_cb(const std_msgs::Float64::ConstPtr& msg);
 
-        std_msgs::Float64 x_pos_setp, x_pos_state;
-        std_msgs::Float64 y_pos_setp, y_pos_state;
-        std_msgs::Float64 z_pos_setp, z_pos_state;
+        std_msgs::Float64 x_setp, x_state;
+        std_msgs::Float64 y_setp, y_state;
+        std_msgs::Float64 z_setp, z_state;
+        std_msgs::Float64 yaw_setp, yaw_state;
 
-        double x_pos_pid_out, y_pos_pid_out, z_pos_pid_out;
+        double x_pid_out, y_pid_out, z_pid_out, yaw_pid_out;
 
     /**************** PID Stuff: END ****************/
 
@@ -138,33 +143,38 @@ drone_connection::drone_connection(ros::NodeHandle& nh)
     
     /* --- ROS PID Controller --- */        
 
-    x_pos_pid_setp_pub = nh.advertise<std_msgs::Float64>
+    x_pid_setp_pub = nh.advertise<std_msgs::Float64>
         ("/x_pos/setpoint", 10);
-    x_pos_pid_state_pub = nh.advertise<std_msgs::Float64>
+    x_pid_state_pub = nh.advertise<std_msgs::Float64>
         ("/x_pos/state", 10);
-    x_pos_pid_out_sub = nh.subscribe<std_msgs::Float64>
-        ("/x_pos/control_effort", 10, &drone_connection::x_pos_pid_cb, this);
+    x_pid_out_sub = nh.subscribe<std_msgs::Float64>
+        ("/x_pos/control_effort", 10, &drone_connection::x_pid_cb, this);
 
-    y_pos_pid_setp_pub = nh.advertise<std_msgs::Float64>
+    y_pid_setp_pub = nh.advertise<std_msgs::Float64>
         ("/y_pos/setpoint", 10);
-    y_pos_pid_state_pub = nh.advertise<std_msgs::Float64>
+    y_pid_state_pub = nh.advertise<std_msgs::Float64>
         ("/y_pos/state", 10);
-    y_pos_pid_out_sub = nh.subscribe<std_msgs::Float64>
-        ("/y_pos/control_effort", 10, &drone_connection::y_pos_pid_cb, this);
+    y_pid_out_sub = nh.subscribe<std_msgs::Float64>
+        ("/y_pos/control_effort", 10, &drone_connection::y_pid_cb, this);
 
-    z_pos_pid_setp_pub = nh.advertise<std_msgs::Float64>
+    z_pid_setp_pub = nh.advertise<std_msgs::Float64>
         ("/z_pos/setpoint", 10);
-    z_pos_pid_state_pub = nh.advertise<std_msgs::Float64>
+    z_pid_state_pub = nh.advertise<std_msgs::Float64>
         ("/z_pos/state", 10);
-    z_pos_pid_out_sub = nh.subscribe<std_msgs::Float64>
-        ("/z_pos/control_effort", 10, &drone_connection::z_pos_pid_cb, this);
+    z_pid_out_sub = nh.subscribe<std_msgs::Float64>
+        ("/z_pos/control_effort", 10, &drone_connection::z_pid_cb, this);
 
+    yaw_pid_setp_pub = nh.advertise<std_msgs::Float64>
+        ("/yaw/setpoint", 10);
+    yaw_pid_state_pub = nh.advertise<std_msgs::Float64>
+        ("/yaw/state", 10);
+    yaw_pid_out_sub = nh.subscribe<std_msgs::Float64>
+        ("/yaw/control_effort", 10, &drone_connection::yaw_pid_cb, this);
 
     pid_debug_sync_cntr = 0;
 
     /* --- ROS PID Controller --- */  
      
-
 
     start_pose.pose.position.x = takeoff.position.x; // -1
     start_pose.pose.position.y = takeoff.position.y; // 2
@@ -238,45 +248,61 @@ void drone_connection::vel_cmd_cb(const geometry_msgs::Twist::ConstPtr& msg){
 
 }
 
-void drone_connection::x_pos_pid_cb(const std_msgs::Float64::ConstPtr& msg)
-{
+void drone_connection::x_pid_cb(const std_msgs::Float64::ConstPtr& msg){
     std::cout << pid_debug_sync_cntr << " - B\n";
-    x_pos_pid_out = msg->data;
+    x_pid_out = msg->data;
 } 
 
-void drone_connection::y_pos_pid_cb(const std_msgs::Float64::ConstPtr& msg)
-{
-    y_pos_pid_out = msg->data;
+void drone_connection::y_pid_cb(const std_msgs::Float64::ConstPtr& msg){
+    y_pid_out = msg->data;
 }
 
-void drone_connection::z_pos_pid_cb(const std_msgs::Float64::ConstPtr& msg)
-{
-    z_pos_pid_out = msg->data;
+void drone_connection::z_pid_cb(const std_msgs::Float64::ConstPtr& msg){
+    z_pid_out = msg->data;
+}
+
+void drone_connection::yaw_pid_cb(const std_msgs::Float64::ConstPtr& msg){
+    yaw_pid_out = msg->data;
 }
 
 
 /////////////////////////////// CALLBACKS END ///////////////////////////////
 
-
+double drone_connection::get_yaw_difference(double from, double to)
+{
+    double difference = to - from; 
+    while (difference < -M_PI) difference += M_PI;
+    while (difference >  M_PI) difference -= M_PI;
+    return difference;
+}
 
 void drone_connection::pub_to_ros_pid(){
     
     std::cout << pid_debug_sync_cntr << " - A\n";
 
-    x_pos_setp.data = pose_cmd_in.pose.position.x; // to transforme it to a std_msgs::Float64
-    x_pos_state.data = curr_pose.pose.position.x;
-    x_pos_pid_setp_pub.publish(x_pos_setp);
-    x_pos_pid_state_pub.publish(x_pos_state);
+    x_setp.data = pose_cmd_in.pose.position.x; // to transforme it to a std_msgs::Float64
+    x_state.data = curr_pose.pose.position.x;
+    x_pid_setp_pub.publish(x_setp);
+    x_pid_state_pub.publish(x_state);
 
-    y_pos_setp.data = pose_cmd_in.pose.position.y; // to transforme it to a std_msgs::Float64
-    y_pos_state.data = curr_pose.pose.position.y;
-    y_pos_pid_setp_pub.publish(y_pos_setp);
-    y_pos_pid_state_pub.publish(y_pos_state);
+    y_setp.data = pose_cmd_in.pose.position.y; // to transforme it to a std_msgs::Float64
+    y_state.data = curr_pose.pose.position.y;
+    y_pid_setp_pub.publish(y_setp);
+    y_pid_state_pub.publish(y_state);
 
-    z_pos_setp.data = pose_cmd_in.pose.position.z; // to transforme it to a std_msgs::Float64
-    z_pos_state.data = curr_pose.pose.position.z;
-    z_pos_pid_setp_pub.publish(z_pos_setp);
-    z_pos_pid_state_pub.publish(z_pos_state);
+    z_setp.data = pose_cmd_in.pose.position.z; // to transforme it to a std_msgs::Float64
+    z_state.data = curr_pose.pose.position.z;
+    z_pid_setp_pub.publish(z_setp);
+    z_pid_state_pub.publish(z_state);
+
+    // yaw stuff:
+    //double from = tf::getYaw(curr_pose.pose.orientation);
+    //double to = tf::getYaw(pose_cmd_in.pose.orientation);
+    yaw_setp.data = 0;
+    yaw_state.data = get_yaw_difference(tf::getYaw(curr_pose.pose.orientation), tf::getYaw(pose_cmd_in.pose.orientation));
+    yaw_pid_setp_pub.publish(yaw_setp);
+    yaw_pid_state_pub.publish(yaw_state);
+    
     
 }
 
@@ -291,16 +317,17 @@ void drone_connection::calc_cntrl_vel(){
         std::cout << pid_debug_sync_cntr << " - C\n";
         pid_debug_sync_cntr++;
 
-        // vel_calc_x = x_pos_pid_out / passed_time.toSec();
-        // vel_calc_y = y_pos_pid_out / passed_time.toSec();
-        // vel_calc_z = z_pos_pid_out / passed_time.toSec();
+        // vel_calc_x = x_pid_out / passed_time.toSec();
+        // vel_calc_y = y_pid_out / passed_time.toSec();
+        // vel_calc_z = z_pid_out / passed_time.toSec();
 
         //std::cout << "calculated vel.: "<< vel_calc_x << std::endl;
         //std::cout << "real vel.:       "<< vel_cmd_in.linear.z << "\n---\n";
         
-        vel_cmd_send.linear.x = x_pos_pid_out / passed_time.toSec(); // vel_calc_x; 
-        vel_cmd_send.linear.y = y_pos_pid_out / passed_time.toSec(); // vel_calc_y;
-        vel_cmd_send.linear.z = z_pos_pid_out / passed_time.toSec(); // vel_calc_z; 
+        vel_cmd_send.linear.x = x_pid_out / passed_time.toSec(); // vel_calc_x; 
+        vel_cmd_send.linear.y = y_pid_out / passed_time.toSec(); // vel_calc_y;
+        vel_cmd_send.linear.z = z_pid_out / passed_time.toSec(); // vel_calc_z; 
+        vel_cmd_send.angular.z = yaw_pid_out / passed_time.toSec();
         
 }
 
