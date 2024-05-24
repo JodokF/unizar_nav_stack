@@ -271,8 +271,8 @@ void drone_connection::yaw_pid_cb(const std_msgs::Float64::ConstPtr& msg){
 double drone_connection::get_yaw_difference(double from, double to)
 {
     double difference = to - from; 
-    while (difference < -M_PI) difference += M_PI;
-    while (difference >  M_PI) difference -= M_PI;
+    while (difference < -M_PI) difference += 2 * M_PI;
+    while (difference >  M_PI) difference -= 2 * M_PI;
     return difference;
 }
 
@@ -296,10 +296,8 @@ void drone_connection::pub_to_ros_pid(){
     z_pid_state_pub.publish(z_state);
 
     // yaw stuff:
-    //double from = tf::getYaw(curr_pose.pose.orientation);
-    //double to = tf::getYaw(pose_cmd_in.pose.orientation);
     yaw_setp.data = 0;
-    yaw_state.data = get_yaw_difference(tf::getYaw(curr_pose.pose.orientation), tf::getYaw(pose_cmd_in.pose.orientation));
+    yaw_state.data = get_yaw_difference(tf::getYaw(pose_cmd_in.pose.orientation), tf::getYaw(curr_pose.pose.orientation));
     yaw_pid_setp_pub.publish(yaw_setp);
     yaw_pid_state_pub.publish(yaw_state);
     
@@ -343,7 +341,7 @@ void drone_connection::calc_cntrl_vel(){
     error_pose.orientation.w = pose_cmd_in.pose.orientation.w - curr_pose.pose.orientation.w; 
     */
     
-    
+
     // to record rosbag from error
     error_pub.publish(error_pose);
 
