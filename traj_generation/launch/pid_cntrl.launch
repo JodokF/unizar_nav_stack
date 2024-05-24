@@ -1,15 +1,42 @@
 <launch>
-    <node name="z_pos" pkg="pid" type="controller" output="screen" >
-      <param name="Kp" value="5.0" />
-      <param name="Ki" value="0.0" />
-      <param name="Kd" value="0.1" />
-      <param name="upper_limit" value="10" />
-      <param name="lower_limit" value="-10" />
-      <param name="windup_limit" value="10" />
-      <param name="cutoff_frequency" value="20" />
-      <param name="max_loop_frequency" value="105.0" />
-      <param name="min_loop_frequency" value="95.0" />
-      <param name="setpoint_timeout" value="-1.0" />
-     </node>
+    <node name="x_pos_cntrl" pkg="pid" type="controller" output="screen" ns="x_pos">
+        <param name="Kp" value="0.02" />
+        <param name="Ki" value="0" />
+        <param name="Kd" value="0" />
+        <param name="upper_limit" value="0.01" /> <!-- 0.4 m/s * 0.025 s = 0.01 m (0.025 s = 40 Hz) -->
+        <param name="lower_limit" value="-0.01" />
+        <param name="windup_limit" value="0.02" />
+        <param name="cutoff_frequency" value="10" /> <!-- = 40 Hz * 1/4 -->
+        <param name="max_loop_frequency" value="45" />
+        <param name="min_loop_frequency" value="35" />
+        <param name="setpoint_timeout" value="-1.0" />
+    </node>
+
+    <node name="y_pos_cntrl" pkg="pid" type="controller" output="screen" ns="y_pos">
+        <param name="Kp" value="0.02" />
+        <param name="Ki" value="0" />
+        <param name="Kd" value="0" />
+        <param name="upper_limit" value="0.01" /> 
+        <param name="lower_limit" value="-0.01" />
+        <param name="windup_limit" value="0.02" />
+        <param name="cutoff_frequency" value="10" /> 
+        <param name="max_loop_frequency" value="45" />
+        <param name="min_loop_frequency" value="35" />
+        <param name="setpoint_timeout" value="-1.0" />
+    </node>
+
+    <node name="z_pos_cntrl" pkg="pid" type="controller" output="screen" ns="z_pos">
+        <param name="Kp" value="0.05" />
+        <param name="Ki" value="0.01" />
+        <param name="Kd" value="0" />
+        <param name="upper_limit" value="0.01" /> 
+        <param name="lower_limit" value="-0.01" />
+        <param name="windup_limit" value="0.02" />
+        <param name="cutoff_frequency" value="10" /> 
+        <param name="max_loop_frequency" value="45" />
+        <param name="min_loop_frequency" value="35" />
+        <param name="setpoint_timeout" value="-1.0" />
+    </node>
+
 
 </launch>
