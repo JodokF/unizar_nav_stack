@@ -465,7 +465,7 @@ bool poly_traj_plan::generate_trajectory() {
     end.makeStartOrEnd(Eigen::Vector4d( goal.pose.position.x,
                                         goal.pose.position.y,
                                         goal.pose.position.z, 
-                                        M_PI/4), 
+                                        (-5*M_PI)/4), 
                                         derivative_to_optimize);
     vertices.push_back(end);
     std::cout << "Goal for traj. x, y, z: \t" << goal.pose.position.x << ", " 
