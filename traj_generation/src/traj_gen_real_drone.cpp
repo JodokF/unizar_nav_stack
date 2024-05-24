@@ -601,10 +601,8 @@ int main(int argc, char** argv){
     poly_traj_plan ptp(std::ref(node_handle));
     int current_traj_state = 0;
 
-
-// debugging to use without voxblox
     bool traj_checker = false;
-//    do{
+
         // run the navigation node and get the trajectory    
         
         int nav_func_checker = ptp.run_navigation_node();
@@ -615,7 +613,10 @@ int main(int argc, char** argv){
             return -1;
         }
         
-       if(check_trajectory() == 0) traj_checker = true;
+       // commented for debugging in simulation
+       // if (check_trajectory() == 0){
+            traj_checker = true;
+        // }
     
        
     
