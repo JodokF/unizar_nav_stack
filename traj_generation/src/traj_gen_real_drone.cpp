@@ -15,7 +15,7 @@ poly_traj_plan::poly_traj_plan(ros::NodeHandle& nh){
     waypoint_cntr = 0;
     marker_cntr = 0;
     sampling_interval = 0.05;
-    altitude_factor = 1; // to reduce the hight of the flying ocho -> if it is 0 flying high is between 1 and 3 m
+    altitude_factor = 0.5; // to reduce the hight of the flying ocho -> if it is 0 flying high is between 1 and 3 m
     x_offset = 1.0;
     
 
@@ -301,7 +301,7 @@ bool poly_traj_plan::generate_trajectory() {
         nav_msgs::Odometry wp0, wp1, wp2, wp3, wp4, wp5, wp6, wp7, wp8; // wp = waypoint, wp0 & wp8 = start & end
     
         vel_threshold = 0.3;//0.8; // geneal vel. limit
-        double x_y_vel = vel_threshold * 0.3; // worked the best for the flying ocho
+        double x_y_vel = vel_threshold * 0.44; // worked the best for the flying ocho
         double z_vel_lin = x_y_vel / 2;       // sets the steepnes of the fyling ocho (right?)
         double z_vel_ang = 0.3;
 
