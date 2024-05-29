@@ -139,9 +139,9 @@ void poly_traj_plan::drawMarkerArray(std::vector<nav_msgs::Odometry> waypoints, 
             marker.pose.orientation.z = 0;
             marker.pose.orientation.w = 1;
         }
-        marker.scale.x = 0.1; 
-        marker.scale.y = 0.1;
-        marker.scale.z = 0.1; 
+        marker.scale.x = 0.05; 
+        marker.scale.y = 0.05;
+        marker.scale.z = 0.05; 
         marker.color.a = 1.0; // Alpha (transparency)
         
 
@@ -195,7 +195,7 @@ void poly_traj_plan::drawMAVTrajectoryMarkers(){
         marker_aux.id = id_marker;
         id_marker++;
         marker_aux.ns = "point";
-        marker_aux.type = visualization_msgs::Marker::CUBE;
+        marker_aux.type = visualization_msgs::Marker::SPHERE;
         marker_aux.pose.position.x = states[i].position_W[0] ;
         marker_aux.pose.position.y = states[i].position_W[1] ;
         marker_aux.pose.position.z = states[i].position_W[2] ;
@@ -207,9 +207,9 @@ void poly_traj_plan::drawMAVTrajectoryMarkers(){
         marker_aux.scale.y = 0.03;
         marker_aux.scale.z = 0.03;
         marker_aux.color.r = 0.0f;
-        marker_aux.color.g = 0.0f;
+        marker_aux.color.g = 0.5f;
         marker_aux.color.b = 1.0f;
-        marker_aux.color.a = 1.0;
+        marker_aux.color.a = 0.75;
         marker_aux.lifetime = ros::Duration();
         markers.markers.push_back(marker_aux);
     }
