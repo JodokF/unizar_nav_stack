@@ -20,9 +20,10 @@ poly_traj_plan::poly_traj_plan(ros::NodeHandle& nh){
     
 
     // for the simulation: (instead of the optitrack goal)
-        goal.pose.position.x = 2;//0 - x_offset; // 2; 
-        goal.pose.position.y = -2; // -1; 
+        goal.pose.position.x = -1.5;//0 - x_offset; // 2; 
+        goal.pose.position.y = 1.5; // -1; 
         goal.pose.position.z = 1.5;//2 - altitude_factor; // 0.75; 
+        goal.pose.orientation.z = M_PI; // actually this is a quaternion but we use it as an euler yaw angle
         // odom_info.pose.pose.position.x = 0;
         // odom_info.pose.pose.position.y = 0;
         // odom_info.pose.pose.position.z = 2;
@@ -305,30 +306,30 @@ bool poly_traj_plan::generate_trajectory() {
         double z_vel_lin = 0;       // sets the steepnes of the fyling ocho (right?)
         double z_vel_ang = 0.1;
     
-        wp1.pose.pose.position.x = -1;
-        wp1.pose.pose.position.y = 1;
+        wp1.pose.pose.position.x = -1.5;
+        wp1.pose.pose.position.y = -1.5;
         wp1.pose.pose.position.z = 1.5;//2.61 - altitude_factor;
-        wp1.pose.pose.orientation.z = M_PI/2; // we use it now as if it were yaw and not a quaternion
-        wp1.twist.twist.linear.x = x_y_vel;
-        wp1.twist.twist.linear.y = -x_y_vel; 
+        wp1.pose.pose.orientation.z = -M_PI/2; // we use it now as if it were yaw and not a quaternion
+        wp1.twist.twist.linear.x = 0;
+        wp1.twist.twist.linear.y = - x_y_vel; 
         wp1.twist.twist.linear.z = z_vel_lin;
         wp1.twist.twist.angular.z = z_vel_ang;
     
-        wp2.pose.pose.position.x = 0;
-        wp2.pose.pose.position.y = 0;
+        wp2.pose.pose.position.x = 1.5;
+        wp2.pose.pose.position.y = -1.5;
         wp2.pose.pose.position.z = 1.5;
-        wp2.pose.pose.orientation.z = M_PI; // we use it now as if it were yaw and not a quaternion
+        wp2.pose.pose.orientation.z = 0; // we use it now as if it were yaw and not a quaternion
         wp2.twist.twist.linear.x = x_y_vel;
-        wp2.twist.twist.linear.y = -x_y_vel; 
+        wp2.twist.twist.linear.y = 0; 
         wp2.twist.twist.linear.z = 0;
         wp2.twist.twist.angular.z = z_vel_ang;
 
-        wp3.pose.pose.position.x = 1;//1.22 - x_offset;
-        wp3.pose.pose.position.y = -1;
+        wp3.pose.pose.position.x = 1.5;//1.22 - x_offset;
+        wp3.pose.pose.position.y = 1.5;
         wp3.pose.pose.position.z = 1.5;
-        wp3.pose.pose.orientation.z = (3*M_PI)/2; //- M_PI; 
-        wp3.twist.twist.linear.x = x_y_vel;
-        wp3.twist.twist.linear.y = -x_y_vel; 
+        wp3.pose.pose.orientation.z = M_PI/2; //- M_PI; 
+        wp3.twist.twist.linear.x = 0;
+        wp3.twist.twist.linear.y = x_y_vel; 
         wp3.twist.twist.linear.z = -z_vel_lin;
         wp3.twist.twist.angular.z = z_vel_ang;
 
@@ -382,7 +383,7 @@ bool poly_traj_plan::generate_trajectory() {
     start.makeStartOrEnd(Eigen::Vector4d(odom_info.pose.pose.position.x,
                                          odom_info.pose.pose.position.y,
                                          odom_info.pose.pose.position.z, 
-                                         0), 
+                                         -M_PI/2), 
                                          derivative_to_optimize);
 
     std::cout << "\n---\n";
@@ -463,7 +464,7 @@ bool poly_traj_plan::generate_trajectory() {
     end.makeStartOrEnd(Eigen::Vector4d( goal.pose.position.x,
                                         goal.pose.position.y,
                                         goal.pose.position.z, 
-                                        2*M_PI), // M_PI/4), 
+                                        goal.pose.orientation.z), // M_PI/4), 
                                         derivative_to_optimize);
     vertices.push_back(end);
     std::cout << "Goal for traj. x, y, z: \t" << goal.pose.position.x << ", " 

@@ -192,6 +192,7 @@ drone_connection::drone_connection(ros::NodeHandle& nh)
     pose_cmd_received = false;
     vel_anomalie_detected = false;
     new_pose_received = false;
+    
     // vel_calc_x = 0;
     // vel_calc_y = 0;
     // vel_calc_z = 0;
@@ -206,12 +207,12 @@ drone_connection::drone_connection(ros::NodeHandle& nh)
 
 drone_connection::~drone_connection()
 {
-    // Todo
+    // To-Do
 }
 
 
 /////////////////////////////// CALLBACKS ///////////////////////////////
-// TODO: make them more slick and sick
+// To-Do: make them more slick and sick
 
 void drone_connection::mavros_state_cb(const mavros_msgs::State::ConstPtr& msg){
     current_mav_state = *msg;
@@ -322,9 +323,9 @@ void drone_connection::calc_cntrl_vel(){
         //std::cout << "calculated vel.: "<< vel_calc_x << std::endl;
         //std::cout << "real vel.:       "<< vel_cmd_in.linear.z << "\n---\n";
         
-        vel_cmd_send.linear.x = x_pid_out / passed_time.toSec(); // vel_calc_x; 
-        vel_cmd_send.linear.y = y_pid_out / passed_time.toSec(); // vel_calc_y;
-        vel_cmd_send.linear.z = z_pid_out / passed_time.toSec(); // vel_calc_z; 
+        vel_cmd_send.linear.x = x_pid_out / passed_time.toSec(); // using instead of passed_time the sampling_interval of the trajectory = 0.05 sec (see traj_gen_real_drone.cpp)
+        vel_cmd_send.linear.y = y_pid_out / passed_time.toSec(); // or using the mean of he passed_times
+        vel_cmd_send.linear.z = z_pid_out / passed_time.toSec(); 
         vel_cmd_send.angular.z = yaw_pid_out / passed_time.toSec();
         
 }
@@ -334,6 +335,7 @@ void drone_connection::calc_cntrl_vel(){
     error_pose.position.x = pose_cmd_in.pose.position.x - curr_pose.pose.position.x;
     error_pose.position.y = pose_cmd_in.pose.position.y - curr_pose.pose.position.y;
     error_pose.position.z = pose_cmd_in.pose.position.z - curr_pose.pose.position.z;
+
     /*
     error_pose.orientation.x = pose_cmd_in.pose.orientation.x - curr_pose.pose.orientation.x;
     error_pose.orientation.y = pose_cmd_in.pose.orientation.y - curr_pose.pose.orientation.y;
