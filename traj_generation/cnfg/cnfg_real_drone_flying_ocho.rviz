@@ -9,6 +9,7 @@ Panels:
         - /TF1/Frames1
         - /Path1
         - /Optitrack1
+        - /EKF21
       Splitter Ratio: 0.5
     Tree Height: 599
   - Class: rviz/Selection
@@ -176,7 +177,7 @@ Visualization Manager:
       Marker Topic: /waypoint_markers
       Name: Waypoints
       Namespaces:
-        waypoints: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -184,12 +185,12 @@ Visualization Manager:
       Marker Topic: /trajectory_markers
       Name: Trajectorypoints
       Namespaces:
-        point: true
+        {}
       Queue Size: 100
       Value: true
     - Alpha: 0.800000011920929
-      Axes Length: 1
-      Axes Radius: 0.10000000149011612
+      Axes Length: 0.5
+      Axes Radius: 0.029999999329447746
       Class: rviz/Pose
       Color: 237; 212; 0
       Enabled: true
@@ -199,22 +200,22 @@ Visualization Manager:
       Queue Size: 10
       Shaft Length: 0.5
       Shaft Radius: 0.07000000029802322
-      Shape: Arrow
+      Shape: Axes
       Topic: /optitrack/pose
       Unreliable: false
       Value: true
-    - Alpha: 0.800000011920929
+    - Alpha: 0.75
       Axes Length: 1
       Axes Radius: 0.10000000149011612
       Class: rviz/Pose
-      Color: 255; 25; 0
+      Color: 0; 163; 255
       Enabled: true
-      Head Length: 0.30000001192092896
-      Head Radius: 0.10000000149011612
+      Head Length: 0.20000000298023224
+      Head Radius: 0.07500000298023224
       Name: EKF2
       Queue Size: 10
-      Shaft Length: 0.800000011920929
-      Shaft Radius: 0.05000000074505806
+      Shaft Length: 0.5
+      Shaft Radius: 0.03999999910593033
       Shape: Arrow
       Topic: /mavros/local_position/pose
       Unreliable: false
@@ -247,7 +248,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 5.003652572631836
+      Distance: 4.844852447509766
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -255,17 +256,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: -0.6705774068832397
-        Y: 0.3579620122909546
-        Z: 1.0859880447387695
+        X: -0.2549229860305786
+        Y: 0.33721232414245605
+        Z: 0.17815516889095306
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.76979660987854
+      Pitch: 0.8147969245910645
       Target Frame: <Fixed Frame>
-      Yaw: 3.153529405593872
+      Yaw: 3.1585283279418945
     Saved: ~
 Window Geometry:
   Displays:
@@ -286,4 +287,4 @@ Window Geometry:
     collapsed: false
   Width: 1677
   X: 150
-  Y: 131
+  Y: 107
