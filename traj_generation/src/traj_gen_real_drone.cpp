@@ -304,7 +304,7 @@ bool poly_traj_plan::generate_trajectory() {
         vel_threshold = 0.3;//0.8; // geneal vel. limit
         double x_y_vel = vel_threshold * 0.44; // worked the best for the flying ocho
         double z_vel_lin = 0;       // sets the steepnes of the fyling ocho (right?)
-        double z_vel_ang = 0.1;
+        double z_vel_ang = 0;
     
         wp1.pose.pose.position.x = -1.5;
         wp1.pose.pose.position.y = -1.5;
@@ -327,7 +327,7 @@ bool poly_traj_plan::generate_trajectory() {
         wp3.pose.pose.position.x = 1.5;//1.22 - x_offset;
         wp3.pose.pose.position.y = 1.5;
         wp3.pose.pose.position.z = 1.5;
-        wp3.pose.pose.orientation.z = M_PI/2; //- M_PI; 
+        wp3.pose.pose.orientation.z = M_PI/2; 
         wp3.twist.twist.linear.x = 0;
         wp3.twist.twist.linear.y = x_y_vel; 
         wp3.twist.twist.linear.z = -z_vel_lin;
