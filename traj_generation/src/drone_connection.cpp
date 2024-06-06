@@ -75,15 +75,12 @@ class drone_connection{
         geometry_msgs::Twist vel_cmd_in, vel_cmd_send;
         geometry_msgs::PoseStamped pose_cmd_in;
         geometry_msgs::Pose error_pose, takeoff;
-        ros::Time ros_time_last, ros_time_now;
-        ros::Duration passed_time;
+
         
         double time_last, vel_threshold_lin, vel_threshold_ang; 
         int sim_or_real; // 0 = default, 1 = simulation, 2 = real drone
         double vel_calc_x, vel_calc_y, vel_calc_z;
         bool vel_anomalie_detected;
-        int pid_debug_sync_cntr;
-
 
     public:
         geometry_msgs::PoseStamped start_pose;
@@ -93,6 +90,8 @@ class drone_connection{
         void calc_error();
         void send_vel_cmds_to_drone();
         int establish_connection_and_take_off();
+        ros::Time ros_time_last, ros_time_now;
+        ros::Duration passed_time;
         drone_connection(ros::NodeHandle& nh);
         ~drone_connection();
 };
@@ -120,6 +119,7 @@ drone_connection::drone_connection(ros::NodeHandle& nh)
         ("/mavros/odometry/out", 10, &drone_connection::sim_pose_cb, this);  // 19.2 Hz
     pose_sub_real = nh.subscribe<geometry_msgs::PoseStamped>
         ("/optitrack/pose", 10, &drone_connection::real_pose_cb, this);  
+        // ("/mavros/vision_pose/pose", 10, &drone_connection::real_pose_cb, this);  
     
     /* --- Sending CMDS to Drone --- */
     pose_pub = nh.advertise<geometry_msgs::PoseStamped>
@@ -171,8 +171,6 @@ drone_connection::drone_connection(ros::NodeHandle& nh)
     yaw_pid_out_sub = nh.subscribe<std_msgs::Float64>
         ("/yaw/control_effort", 10, &drone_connection::yaw_pid_cb, this);
 
-    pid_debug_sync_cntr = 0;
-
     /* --- ROS PID Controller --- */  
      
 
@@ -192,6 +190,7 @@ drone_connection::drone_connection(ros::NodeHandle& nh)
     pose_cmd_received = false;
     vel_anomalie_detected = false;
     new_pose_received = false;
+    
     // vel_calc_x = 0;
     // vel_calc_y = 0;
     // vel_calc_z = 0;
@@ -206,12 +205,12 @@ drone_connection::drone_connection(ros::NodeHandle& nh)
 
 drone_connection::~drone_connection()
 {
-    // Todo
+    // To-Do
 }
 
 
 /////////////////////////////// CALLBACKS ///////////////////////////////
-// TODO: make them more slick and sick
+// To-Do: make them more slick and sick
 
 void drone_connection::mavros_state_cb(const mavros_msgs::State::ConstPtr& msg){
     current_mav_state = *msg;
@@ -249,7 +248,6 @@ void drone_connection::vel_cmd_cb(const geometry_msgs::Twist::ConstPtr& msg){
 }
 
 void drone_connection::x_pid_cb(const std_msgs::Float64::ConstPtr& msg){
-    std::cout << pid_debug_sync_cntr << " - B\n";
     x_pid_out = msg->data;
 } 
 
@@ -278,8 +276,6 @@ double drone_connection::get_yaw_difference(double from, double to)
 
 void drone_connection::pub_to_ros_pid(){
     
-    std::cout << pid_debug_sync_cntr << " - A\n";
-
     x_setp.data = pose_cmd_in.pose.position.x; // to transforme it to a std_msgs::Float64
     x_state.data = curr_pose.pose.position.x;
     x_pid_setp_pub.publish(x_setp);
@@ -307,14 +303,11 @@ void drone_connection::pub_to_ros_pid(){
 
 void drone_connection::calc_cntrl_vel(){
 
-        
+    
         passed_time = ros::Time::now() - ros_time_last; // = 0.052 sec = aprx. 20 hz
         ros_time_last = ros::Time::now();
 
         // calc k controller values:
-        std::cout << pid_debug_sync_cntr << " - C\n";
-        pid_debug_sync_cntr++;
-
         // vel_calc_x = x_pid_out / passed_time.toSec();
         // vel_calc_y = y_pid_out / passed_time.toSec();
         // vel_calc_z = z_pid_out / passed_time.toSec();
@@ -322,9 +315,13 @@ void drone_connection::calc_cntrl_vel(){
         //std::cout << "calculated vel.: "<< vel_calc_x << std::endl;
         //std::cout << "real vel.:       "<< vel_cmd_in.linear.z << "\n---\n";
         
-        vel_cmd_send.linear.x = x_pid_out / passed_time.toSec(); // vel_calc_x; 
-        vel_cmd_send.linear.y = y_pid_out / passed_time.toSec(); // vel_calc_y;
-        vel_cmd_send.linear.z = z_pid_out / passed_time.toSec(); // vel_calc_z; 
+        std::cout << std::fixed << std::showpoint << std::setprecision(6);
+        std::cout << "Passed time: "<< passed_time.toSec() <<"\n";
+
+
+        vel_cmd_send.linear.x = x_pid_out / passed_time.toSec(); // using instead of passed_time the sampling_interval of the trajectory = 0.05 sec (see traj_gen_real_drone.cpp)
+        vel_cmd_send.linear.y = y_pid_out / passed_time.toSec(); // or using the mean of he passed_times
+        vel_cmd_send.linear.z = z_pid_out / passed_time.toSec(); 
         vel_cmd_send.angular.z = yaw_pid_out / passed_time.toSec();
         
 }
@@ -334,6 +331,7 @@ void drone_connection::calc_cntrl_vel(){
     error_pose.position.x = pose_cmd_in.pose.position.x - curr_pose.pose.position.x;
     error_pose.position.y = pose_cmd_in.pose.position.y - curr_pose.pose.position.y;
     error_pose.position.z = pose_cmd_in.pose.position.z - curr_pose.pose.position.z;
+
     /*
     error_pose.orientation.x = pose_cmd_in.pose.orientation.x - curr_pose.pose.orientation.x;
     error_pose.orientation.y = pose_cmd_in.pose.orientation.y - curr_pose.pose.orientation.y;
@@ -345,31 +343,17 @@ void drone_connection::calc_cntrl_vel(){
     // to record rosbag from error
     error_pub.publish(error_pose);
 
-    /*
-    std::cout << std::fixed << std::showpoint << std::setprecision(3);
-    std::cout << "Error x, y, z: "  << error_pose.position.x << ", " 
-                                     << error_pose.position.y << ", "
-                                     << error_pose.position.z << "\n";
-    */
 
  }
  
  void drone_connection::send_vel_cmds_to_drone(){
 
-  
-    std::cout << std::fixed << std::showpoint << std::setprecision(3);
-
-        std::cout << "---\nVelocities:\nCalc::"   << vel_cmd_send.linear.x << " x; " 
-                                                << vel_cmd_send.linear.y << " y; " 
-                                                << vel_cmd_send.linear.z << " z;\n";//\nAng: ";
-                                                //<< vel_cmd_send.angular.x << " roll; "
-                                                //<< vel_cmd_send.angular.y << " pitch; "
-                                                //<< vel_cmd_send.angular.z << " yaw;\n";
-        std::cout << "Org: "  << vel_cmd_in.linear.x << " x; " 
-                                            << vel_cmd_in.linear.y << " y; " 
-                                            << vel_cmd_in.linear.z << " z;\n---\n";//\nAng: ";
-
-
+    std::cout << std::fixed << std::showpoint << std::setprecision(2);
+    std::cout   << "Vel. send lin. & yaw: (" 
+                << vel_cmd_send.linear.x << ", "
+                << vel_cmd_send.linear.y << ", "
+                << vel_cmd_send.linear.z << ") - "
+                << vel_cmd_send.angular.z << "\n ---";
     
 
     // if the calculatet velocity is under the vel_threshold -> publish it
@@ -516,6 +500,11 @@ int main(int argc, char **argv)
 
     ROS_INFO("Publishing velocitiess now...");
     // check if commands are recived for flying the trajectory
+
+    
+    drone.ros_time_last = ros::Time::now(); 
+    rate40.sleep(); // if no sleep the first passed time is 0 and then division by zero
+
     if (drone.pose_cmd_received == true || drone.vel_cmd_received == true){
         if(drone.use_cntrl == true){ // check if controller should be used
             while(ros::ok()){     
