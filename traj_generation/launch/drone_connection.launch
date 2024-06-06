@@ -3,12 +3,12 @@
 
     <!--ARGUMENTS-->
     <!-- take-off and fly to (WRT ODOM FRAME, this is the starting pose of the drone) -->
-    <arg name="x" default="-1.5"/>
-    <arg name="y" default="1.5"/>
+    <arg name="x" default="-1"/>
+    <arg name="y" default="0"/>
     <arg name="z" default="1.5"/>
     <arg name="R" default="0"/>
     <arg name="P" default="0"/>
-    <arg name="Y" default="-1.507"/> <!-- 0.7854 = 45 grad = PI / 4  -->
+    <arg name="Y" default="0.7854"/> <!-- 0.7854 = 45 grad = PI / 4  -->
 
     <arg name="cntrl" default="true"/>
     <arg name="simulation" default="false"/>
