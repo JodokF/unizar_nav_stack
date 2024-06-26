@@ -12,6 +12,7 @@ rotors_description/
 velodyne_simulator/
 # hector_moveit_actions/
 voxblox/
+VIO/
 
 
 

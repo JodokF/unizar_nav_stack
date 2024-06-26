@@ -1,0 +1,28 @@
+<launch>
+  <include file="$(find realsense2_camera)/launch/rs_t265.launch"/>
+
+  <!-- Launch static transform publishers -->
+
+      <arg name="x" default="-1"/>
+      <arg name="y" default="0"/>
+      <arg name="z" default="1.5"/>
+      <arg name="roll" default="0"/>
+      <arg name="pitch" default="0"/>
+      <arg name="yaw" default="0.7854"/> <!-- 0.7854 = 45 grad = PI / 4  -->
+
+  <!-- <param name="param_x" command="$(find rosparam) get /frame_offset/x" />
+  <param name="param_y" command="$(find rosparam) get /frame_offset/y" />
+  <param name="param_z" command="$(find rosparam) get /frame_offset/z" />
+  <param name="param_yaw" command="$(find rosparam) get /frame_offset/yaw" />
+  <param name="param_roll" command="$(find rosparam) get /frame_offset/roll" />
+  <param name="param_pitch" command="$(find rosparam) get /frame_offset/pitch" /> -->
+
+  <node pkg="tf" type="static_transform_publisher" name="odom_to_odom_cam"
+        args="$(arg x) $(arg y) $(arg z) $(arg yaw) $(arg roll) $(arg pitch) odom odom_cam 1000"/>
+
+  <node pkg="tf" type="static_transform_publisher" name="odom_cam_to_camera_odom_frame"
+        args="0 0 0 0 0 0 odom_cam camera_odom_frame 1000"/>
+
+</launch>
+
+

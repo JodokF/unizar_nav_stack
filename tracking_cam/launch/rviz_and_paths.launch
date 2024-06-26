@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<launch>
+
+  <node pkg="hector_trajectory_server" type="hector_trajectory_server" name="trajectory_server_loam_1" ns="gt_1" >
+        <param name="/target_frame_name" value="odom" />
+        <param name="/trajectory_update_rate" value="10.0" />
+        <param name="/trajectory_publish_rate" value="10.0" />
+        <param name="/source_frame_name" value="cine_mpc" />
+  </node>
+
+    <node pkg="hector_trajectory_server" type="hector_trajectory_server" name="trajectory_server_loam_2" ns="gt_2" >
+        <param name="/target_frame_name" value="odom" />
+        <param name="/trajectory_update_rate" value="10.0" />
+        <param name="/trajectory_publish_rate" value="10.0" />
+        <param name="/source_frame_name" value="camera_pose_frame" />
+  </node>
+
+  
+  <node name="rviz" pkg="rviz" type="rviz" 
+  args="--display-config=/home/cconradi/Documents/catkin_ws/src/nav_stack_cc/traj_generation/cnfg/t265_cam_and_paths.rviz" />
+
+
+    
+
+</launch>
