@@ -230,13 +230,11 @@ void drone_connection::real_pose_cb(const geometry_msgs::PoseStamped::ConstPtr& 
     curr_pose_real = *msg;
     curr_pose = curr_pose_real;
     new_pose_received = true;
-
 }
 
 void drone_connection::pose_cmd_cb(const geometry_msgs::PoseStamped::ConstPtr& msg){
     pose_cmd_in = *msg;
-    pose_cmd_received = true;
-        
+    pose_cmd_received = true;  
 }
 
 void drone_connection::vel_cmd_cb(const geometry_msgs::Twist::ConstPtr& msg){
@@ -244,7 +242,6 @@ void drone_connection::vel_cmd_cb(const geometry_msgs::Twist::ConstPtr& msg){
     vel_cmd_send = vel_cmd_in;  // idk probably 'vel_cmd_in' could also be used without copying it to vel_cmd_send
                                 // but since it gets changed in the controller the original velocity command is preserved
     vel_cmd_received = true;
-
 }
 
 void drone_connection::x_pid_cb(const std_msgs::Float64::ConstPtr& msg){

@@ -52,10 +52,7 @@
         <arg name="respawn_mavros" value="$(arg respawn_mavros)"/>
     </include>
 
-    <!-- <node pkg="tf2_ros" type="static_transform_publisher" name="map2baseLink_broadcast" args="0 0 0 0 0 0 odom base_link" /> -->
-    <!-- <node pkg="tf" type="static_transform_publisher" name="odom2base_link" args="$0 0 0 0 0 0 odom base_link 100" /> -->
     <node pkg="tf" type="static_transform_publisher" name="map2odom" args="$0 0 0 0 0 0 map odom 100" />
-
 
   <!-- paint the drone trajectory in rviz-->
   <node pkg="hector_trajectory_server" type="hector_trajectory_server" name="trajectory_server_loam" ns="gt" >
