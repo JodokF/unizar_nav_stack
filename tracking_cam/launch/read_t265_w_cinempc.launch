@@ -3,12 +3,12 @@
 
   <!-- Launch static transform publishers -->
 
-      <arg name="x" default="-1"/>
+      <arg name="x" default="0"/>
       <arg name="y" default="0"/>
-      <arg name="z" default="1.5"/>
+      <arg name="z" default="0"/>
       <arg name="roll" default="0"/>
       <arg name="pitch" default="0"/>
-      <arg name="yaw" default="0.7854"/> <!-- 0.7854 = 45 grad = PI / 4  -->
+      <arg name="yaw" default="0"/> <!-- 0.7854 = 45 grad = PI / 4  -->
 
   <!-- <param name="param_x" command="$(find rosparam) get /frame_offset/x" />
   <param name="param_y" command="$(find rosparam) get /frame_offset/y" />
