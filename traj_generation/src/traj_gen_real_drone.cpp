@@ -15,7 +15,7 @@ poly_traj_plan::poly_traj_plan(ros::NodeHandle& nh){
     waypoint_cntr = 0;
     marker_cntr = 0;
     sampling_interval = 0.05;
-    altitude_factor = 0.5; // to reduce the hight of the flying ocho -> if it is 0 flying high is between 1 and 3 m
+    altitude_factor = 1; // to *reduce* the hight of the flying ocho -> if it is 0 flying high is between 1 and 3 m -> start & goal at 2 m
     x_offset = 1.0;
     
 
