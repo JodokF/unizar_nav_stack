@@ -3,12 +3,13 @@
     <!-- MAVROS posix SITL environment launch script -->
     <!-- launches MAVROS, PX4 SITL, Gazebo environment, and spawns vehicle -->
     <!-- vehicle pose -->
+
     <arg name="x" default="-1"/> <!-- -1 -->
-    <arg name="y" default="2"/> <!-- 2 -->
+    <arg name="y" default="0"/> <!-- 2 -->
     <arg name="z" default="0"/>
     <arg name="R" default="0"/>
     <arg name="P" default="0"/>
-    <arg name="Y" default="0"/> <!-- 0.7854 = PI / 4 -->
+    <arg name="Y" default="0.7854"/> <!-- 0.7854 = PI / 4 = 45 grad-->
     <!-- vehicle model and world -->
     <arg name="est" default="ekf2"/>
     <arg name="vehicle" default="iris"/>
@@ -52,10 +53,8 @@
         <arg name="respawn_mavros" value="$(arg respawn_mavros)"/>
     </include>
 
-    <!-- <node pkg="tf2_ros" type="static_transform_publisher" name="map2baseLink_broadcast" args="0 0 0 0 0 0 odom base_link" /> -->
-    <!-- <node pkg="tf" type="static_transform_publisher" name="odom2base_link" args="$0 0 0 0 0 0 odom base_link 100" /> -->
-    <node pkg="tf" type="static_transform_publisher" name="map2odom" args="0 0 0 0 0 0 map odom 100" />
 
+    <node pkg="tf" type="static_transform_publisher" name="map2odom" args="$0 0 0 0 0 0 map odom 100" />
 
   <!-- paint the drone trajectory in rviz-->
   <node pkg="hector_trajectory_server" type="hector_trajectory_server" name="trajectory_server_loam" ns="gt" >
@@ -66,7 +65,8 @@
   </node>
   
     <!-- <node name="vision_topic_handler" pkg="offb_sim" type="vision_topic_handler" /> -->
-    <!-- <node name="rviz" pkg="rviz" type="rviz" args=" hier fehlen zwei bindestriche display-config=/home/cconradi/Documents/catkin_ws/src/nav_stack_cc/traj_generation/cnfg/cnfg.rviz" /> -->
+
+    <node name="rviz" pkg="rviz" type="rviz" args="--display-config=/home/cconradi/Documents/catkin_ws/src/nav_stack_cc/traj_generation/cnfg/cnfg_no_vxblx_sim_debugging_px4.rviz" />
     
 
 

@@ -100,7 +100,7 @@ int main(int argc, char **argv)
 
     //Stablish the cmd_vel frame
     mavros_msgs::SetMavFrame set_frame_msg;
-    set_frame_msg.request.mav_frame = set_frame_msg.request.FRAME_BODY_NED;  // FRAME_LOCAL_NED = Global
+    set_frame_msg.request.mav_frame = set_frame_msg.request.FRAME_LOCAL_NED;  // FRAME_LOCAL_NED = Global
     std::cout << "\nMavframe set: "<< set_cmd_vel_frame.call(set_frame_msg) << std::endl;
     
 
@@ -144,7 +144,7 @@ int main(int argc, char **argv)
         if(curr_pose.pose.pose.position.z >= pose.pose.position.z-0.1) hight_check = true;
         if(hight_check == true) cntr++;
         if(cntr == 1) std::cout << "Waiting...\n";    
-        if(cntr > 200) break;
+        if(cntr > 200 && cmd_vel_unstamped_pub.getNumSubscribers() > 0) break;
 
         local_pos_pub.publish(pose);
 

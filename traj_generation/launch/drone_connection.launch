@@ -1,0 +1,52 @@
+<?xml version="1.0"?>
+<launch>
+
+    <!--ARGUMENTS-->
+    <!-- take-off and fly to (WRT ODOM FRAME, this is the starting pose of the drone) -->
+    <arg name="x" default="-1"/>
+    <arg name="y" default="0"/>
+    <arg name="z" default="1"/>
+    <arg name="R" default="0"/>
+    <arg name="P" default="0"/>
+    <arg name="Y" default="0.7854"/> <!-- 0.7854 = 45 grad = PI / 4  -->
+
+    <arg name="cntrl" default="true"/>
+    <arg name="simulation" default="false"/>
+    <arg name="tracking_camera" default="false"/>
+    
+    <!-- Drone connection--> 
+ 
+    <node pkg="traj_generation" type="drone_connection" name="drone_connection_node" output="screen" >
+
+      <param name="x_takeoff" value="$(arg x)" />
+      <param name="y_takeoff" value="$(arg y)" />
+      <param name="z_takeoff" value="$(arg z)" />
+      <param name="R_takeoff" value="$(arg R)" />
+      <param name="P_takeoff" value="$(arg P)" />
+      <param name="Y_takeoff" value="$(arg Y)" />
+
+      <param name="use_cntrl" value="$(arg cntrl)" /> 
+      <param name="simulation" value="$(arg simulation)" />    
+      <param name="tracking_camera" value="$(arg tracking_camera)" />    
+
+        
+    </node>
+
+
+<!-- One path painting server if the source frame is base_link -->
+  <node pkg="hector_trajectory_server" type="hector_trajectory_server" name="trajectory_server_loam" ns="base_link" >
+        <param name="/target_frame_name" value="odom" />
+        <param name="/trajectory_update_rate" value="10.0" />
+        <param name="/trajectory_publish_rate" value="10.0" />
+        <param name="/source_frame_name" value="base_link" />
+  </node>
+
+<!-- The other path painting server if the source frame is cine_mpc -->
+  <node pkg="hector_trajectory_server" type="hector_trajectory_server" name="trajectory_server_loam" ns="cine_mpc" >
+        <param name="/target_frame_name" value="odom" />
+        <param name="/trajectory_update_rate" value="10.0" />
+        <param name="/trajectory_publish_rate" value="10.0" />
+        <param name="/source_frame_name" value="cine_mpc" />
+  </node>
+
+</launch>

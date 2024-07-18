@@ -17,7 +17,7 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <visualization_msgs/MarkerArray.h>
 
-#include <hector_uav_msgs/EnableMotors.h>
+// #include <hector_uav_msgs/EnableMotors.h>
 
 #include <eigen3/Eigen/Core>
 #include <eigen3/Eigen/Geometry>
@@ -35,6 +35,7 @@
 #include <mavros_msgs/State.h>
 #include <iomanip> 
 
+// for the camera tf frame transformation:
 #include <tf/tf.h>
 #include <tf2_ros/transform_listener.h>
 #include <tf2_sensor_msgs/tf2_sensor_msgs.h>
@@ -46,12 +47,12 @@
 class poly_traj_plan{
     private:
 
-        bool waypoints_received, odom_received, goal_recieved, planner_service_called;
+        bool waypoints_received, odom_received, goal_recieved, planner_service_called, tracking_camera;
         int nmbr_of_states, curr_state, waypoint_cntr, marker_cntr;
         
-        ros::Subscriber plan_sub, pose_sub, goal_sub;
+        ros::Subscriber plan_sub, pose_sub_geomtry_msg_pose, pose_sub_nav_msg_odom, goal_sub;
         ros::Publisher vel_pub, mav_traj_markers_pub, marker_pub, pose_pub;
-        std::string odom_topic, default_odom_topic, goal_topic, default_goal_topic, planner_service;
+        std::string pose_nav_msg_odom_msg_topic, default_odom_topic, goal_topic, default_goal_topic, planner_service;
 
         mav_trajectory_generation::Trajectory trajectory;
         mav_trajectory_generation::Vertex::Vector vertices;
@@ -60,21 +61,34 @@ class poly_traj_plan{
         geometry_msgs::PoseArray vxblx_waypoints;
         // std::vector<geometry_msgs::Pose> trajectory;
         nav_msgs::Odometry odom_info;
+        geometry_msgs::PoseStamped odom_info_geo_msg;
         geometry_msgs::PoseStamped goal;
         geometry_msgs::PoseStamped cmd_pose;
         geometry_msgs::Twist cmd_vel;
-        hector_uav_msgs::EnableMotors motor_enable_service_msg;
+        
         std_srvs::Empty path_plan_req;
         ros::ServiceClient motor_enable_service; 
         ros::ServiceClient path_plan_client;
 
+        
+        // for the camera tf frame transformation:
+        geometry_msgs::TransformStamped tf_odom_to_camera;
+        geometry_msgs::PoseStamped temp_pose;
+        tf2_ros::Buffer tf_buffer;
+        tf2_ros::TransformListener tf_listener; 
+        std::string target_frame, source_frame;
+
+
+        double altitude_factor, x_offset;
+
 
         // functions:
-        void poseCallback(const nav_msgs::Odometry::ConstPtr &msg);
+        void poseCallback_nav_msg_odom(const nav_msgs::Odometry::ConstPtr &msg);
+        void poseCallback_geomtry_msg_pose(const geometry_msgs::PoseStamped::ConstPtr &msg);
         void planCallback(const geometry_msgs::PoseArray::ConstPtr &msg);
         void goalCallback(const geometry_msgs::PoseStamped::ConstPtr &msg);
         void drawMAVTrajectoryMarkers();
-        void drawMarkerArray(geometry_msgs::PoseArray waypoints, int color, int offset);
+        void drawMarkerArray(std::vector<nav_msgs::Odometry> waypoints, int color, int offset);
         double goalDistance(geometry_msgs::Pose pose, geometry_msgs::Point goal);
         double get_yaw_from_quat(const geometry_msgs::Quaternion );
         geometry_msgs::Pose calculateMidpoint(const geometry_msgs::Pose& pose1, const geometry_msgs::Pose& pose2);
