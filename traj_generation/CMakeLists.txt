@@ -42,5 +42,3 @@ add_executable(drone_connection src/drone_connection.cpp)
 # add_dependencies(drone_connection ${catkin_EXPORTED_TARGETS})
 target_link_libraries(drone_connection ${catkin_LIBRARIES})# Eigen3::Eigen)
 
-add_executable(sandbox src/sandbox.cpp)
-target_link_libraries(sandbox ${catkin_LIBRARIES})# Eigen3::Eigen)
