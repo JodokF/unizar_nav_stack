@@ -2,13 +2,16 @@
 
 /******************** Constructors ******************/
 
-poly_traj_plan::poly_traj_plan(ros::NodeHandle& nh){    
+poly_traj_plan::poly_traj_plan(ros::NodeHandle& nh)
+                : tf_listener(tf_buffer, nh) 
+{    
 
     //odom_topic = "/mavros/odometry/out";
-    odom_topic = "/optitrack/pose"; // = cine_mpc drone pose (when the optitrack launch file is executed)
-    //goal_topic = "/vrpn_client_node/goal_optitrack/pose";
+    // pose_nav_msg_odom_msg_topic = "/optitrack/pose"; // = cine_mpc drone pose (when the optitrack launch file is executed)
+    goal_topic = "/vrpn_client_node/goal_optitrack/pose";
 
     nh.param("/planner_service", planner_service, std::string("/voxblox_rrt_planner/plan"));
+    nh.getParam("/drone_connection_node/tracking_camera", tracking_camera); // check if tracking camera is used
 
     nmbr_of_states = 0;
     curr_state = 0;
@@ -35,10 +38,10 @@ poly_traj_plan::poly_traj_plan(ros::NodeHandle& nh){
                 ("/trajectory_markers", 0);
     marker_pub = nh.advertise<visualization_msgs::MarkerArray>
                 ("/waypoint_markers", 10);
-    pose_sub_real = nh.subscribe<geometry_msgs::PoseStamped>
-                ("/optitrack/pose",10,&poly_traj_plan::poseCallbackReal,this);
-    pose_sub_sim = nh.subscribe<nav_msgs::Odometry>
-                ("/mavros/odometry/out",10,&poly_traj_plan::poseCallbackSim,this);
+    pose_sub_geomtry_msg_pose = nh.subscribe<geometry_msgs::PoseStamped>
+                ("/optitrack/pose",10,&poly_traj_plan::poseCallback_geomtry_msg_pose,this);
+    pose_sub_nav_msg_odom = nh.subscribe<nav_msgs::Odometry>
+                ("/mavros/odometry/out",10,&poly_traj_plan::poseCallback_nav_msg_odom,this);
     goal_sub = nh.subscribe<geometry_msgs::PoseStamped>
                 (goal_topic,10,&poly_traj_plan::goalCallback,this);
     plan_sub = nh.subscribe<geometry_msgs::PoseArray>
@@ -52,6 +55,11 @@ poly_traj_plan::poly_traj_plan(ros::NodeHandle& nh){
     odom_received = false;
     goal_recieved = true;
     planner_service_called = false;
+
+    target_frame = "odom";
+    source_frame = "base_link";
+    temp_pose.pose.orientation.w = 1.0;
+    odom_info_geo_msg.pose.orientation.w = 1.0;
 }
 
 /******************** Functions ******************/
@@ -79,16 +87,43 @@ void poly_traj_plan::goalCallback(const geometry_msgs::PoseStamped::ConstPtr &ms
 
 }
 
-void poly_traj_plan::poseCallbackSim(const nav_msgs::Odometry::ConstPtr &msg){    
-    odom_info = *msg;
-    odom_received = true;
-    // std::cout << "\n--- odom received ---\n";
+void poly_traj_plan::poseCallback_nav_msg_odom(const nav_msgs::Odometry::ConstPtr &msg){    
+    
+    if (tracking_camera == false){
+        odom_info = *msg;
+        odom_received = true;
+    }
+
+    // The following is necessary because the tracking camera publishes only a topic in respect to the camera_odom_frame 
+    // but since this frame is at (0.16, 0, 0.205) at start up and not (0, 0, 0) we need the pose of the cam
+    // in respect to the odom frame
+    if(tracking_camera == true){ 
+        // to evade some error msgs at the startup
+        if (tf_buffer.canTransform(target_frame, source_frame, ros::Time(0))) {
+            try{
+                tf_odom_to_camera = tf_buffer.lookupTransform(target_frame, source_frame, ros::Time(0));
+            } catch (tf2::TransformException ex){
+                ROS_ERROR("%s",ex.what());
+            }
+            tf2::doTransform(temp_pose, odom_info_geo_msg, tf_odom_to_camera); // temp_pose has to be an geometry_msgs::PoseStamped...
+        
+            odom_info.header = odom_info_geo_msg.header; 
+            odom_info.pose.pose = odom_info_geo_msg.pose;
+        }
+        else {
+        ROS_WARN("Transform not available yet, waiting...");
+        ros::Duration(1).sleep();
+        }
+
+        odom_received = true;
+
+    }
+    
     
 }
 
-void poly_traj_plan::poseCallbackReal(const geometry_msgs::PoseStamped::ConstPtr &msg){
+void poly_traj_plan::poseCallback_geomtry_msg_pose(const geometry_msgs::PoseStamped::ConstPtr &msg){
     
-    odom_info.child_frame_id;
     odom_info.header = msg->header;
     odom_info.pose.pose = msg->pose;    
 
@@ -231,7 +266,7 @@ int poly_traj_plan::run_navigation_node(){
     while_loop_ctrl = 0;
 
     // Debug Info:
-    std::cout << "---\nDrooone position for planner (x, y, z): (" << odom_info.pose.pose.position.x << ", " 
+    std::cout << "---\nDrone position for planner (x, y, z): (" << odom_info.pose.pose.position.x << ", " 
                                                                 << odom_info.pose.pose.position.y << ", " 
                                                                 << odom_info.pose.pose.position.z << ") \n"; 
 

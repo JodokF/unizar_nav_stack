@@ -11,13 +11,18 @@
 #include <tf/transform_datatypes.h>
 #include "std_msgs/Float64.h"
 
+// for the camera tf frame transformation:
+#include <tf2_ros/transform_listener.h>
+#include <tf2_sensor_msgs/tf2_sensor_msgs.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+
 
 class drone_connection{
 
     private:
         void mavros_state_cb(const mavros_msgs::State::ConstPtr& msg);
-        void sim_pose_cb(const nav_msgs::Odometry::ConstPtr& msg);
-        void real_pose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg);
+        void poseCallback_nav_msg_odom(const nav_msgs::Odometry::ConstPtr& msg);
+        void poseCallback_geomtry_msg_pose(const geometry_msgs::PoseStamped::ConstPtr& msg);
         void vel_cmd_cb(const geometry_msgs::Twist::ConstPtr& msg);
         void pose_cmd_cb(const geometry_msgs::PoseStamped::ConstPtr& msg);
         double calc_euc_dist(geometry_msgs::Pose pose, geometry_msgs::Pose goal);
@@ -27,8 +32,8 @@ class drone_connection{
         ros::Subscriber state_sub;
         ros::Subscriber vel_cmd_sub;
         ros::Subscriber pose_cmd_sub;
-        ros::Subscriber pose_sub_sim;
-        ros::Subscriber pose_sub_real;
+        ros::Subscriber pose_sub_geomtry_msg_pose;
+        ros::Subscriber pose_sub_nav_msg_odom;
         ros::Publisher pose_pub;
         ros::Publisher error_pub;
         ros::Publisher cmd_vel_unstmpd_pub;
@@ -69,22 +74,26 @@ class drone_connection{
         mavros_msgs::State current_mav_state;
 
         nav_msgs::Odometry curr_pose_sim;
-        geometry_msgs::PoseStamped curr_pose_real;
-        geometry_msgs::PoseStamped curr_pose;
+        geometry_msgs::PoseStamped curr_pose, curr_pose_temp;
 
         geometry_msgs::Twist vel_cmd_in, vel_cmd_send;
         geometry_msgs::PoseStamped pose_cmd_in;
-        geometry_msgs::Pose error_pose, takeoff;
+        geometry_msgs::Pose error_pose;
+        
+        // for the camera tf frame transformation:
+        geometry_msgs::TransformStamped tf_odom_to_camera;
+        tf2_ros::Buffer tf_buffer;
+        tf2_ros::TransformListener tf_listener; 
+        std::string target_frame, source_frame;
 
         
         double time_last, vel_threshold_lin, vel_threshold_ang; 
-        int sim_or_real; // 0 = default, 1 = simulation, 2 = real drone
         double vel_calc_x, vel_calc_y, vel_calc_z;
         bool vel_anomalie_detected;
 
     public:
-        geometry_msgs::PoseStamped start_pose;
-        bool vel_cmd_received, pose_cmd_received, new_pose_received, use_cntrl;
+        geometry_msgs::PoseStamped start_pose, safety_takeoff_pose;
+        bool vel_cmd_received, pose_cmd_received, drone_pose_received, use_cntrl, tracking_camera;
         void calc_cntrl_vel();
         void pub_to_ros_pid();
         void calc_error();
@@ -97,31 +106,47 @@ class drone_connection{
 };
 
 drone_connection::drone_connection(ros::NodeHandle& nh)
+    : tf_listener(tf_buffer, nh) 
 {
 
     /* --- Parameter from launch file---*/
     //   declare the variables to read from param
     //   Read the take-off pose
-    nh.getParam("/drone_connection_node/x_takeoff", takeoff.position.x);
-    nh.getParam("/drone_connection_node/y_takeoff", takeoff.position.y);
-    nh.getParam("/drone_connection_node/z_takeoff", takeoff.position.z);
-    nh.getParam("/drone_connection_node/R_takeoff", takeoff.orientation.x); // saved as RPY not Quaternion
-    nh.getParam("/drone_connection_node/P_takeoff", takeoff.orientation.y); // saved as RPY not Quaternion
-    nh.getParam("/drone_connection_node/Y_takeoff", takeoff.orientation.z); // saved as RPY not Quaternion
+    nh.getParam("/drone_connection_node/x_takeoff", start_pose.pose.position.x);
+    nh.getParam("/drone_connection_node/y_takeoff", start_pose.pose.position.y);
+    nh.getParam("/drone_connection_node/z_takeoff", start_pose.pose.position.z);
+    nh.getParam("/drone_connection_node/R_takeoff", start_pose.pose.orientation.x); // saved as RPY not Quaternion
+    nh.getParam("/drone_connection_node/P_takeoff", start_pose.pose.orientation.y); // saved as RPY not Quaternion
+    nh.getParam("/drone_connection_node/Y_takeoff", start_pose.pose.orientation.z); // saved as RPY not Quaternion
     nh.getParam("/drone_connection_node/use_cntrl", use_cntrl); // determine if controller should be used or not
+    nh.getParam("/drone_connection_node/tracking_camera", tracking_camera); // check if tracking camera is used
 
-    /* --- Getting CMDS --- */
+    //Transform Startpose RPY to Quaternions:
+    tf2::Quaternion quaternion;
+    quaternion.setRPY(start_pose.pose.orientation.x,
+                      start_pose.pose.orientation.y, 
+                      start_pose.pose.orientation.z);
+
+    start_pose.pose.orientation.x = quaternion.getX();
+    start_pose.pose.orientation.y = quaternion.getY();
+    start_pose.pose.orientation.z = quaternion.getZ();
+    start_pose.pose.orientation.w = quaternion.getW(); 
+
+
+    /* --- Getting CMDS and POSES --- */
     vel_cmd_sub = nh.subscribe<geometry_msgs::Twist>
         ("/vel_cmd_2_drone", 10, &drone_connection::vel_cmd_cb, this);
     pose_cmd_sub = nh.subscribe<geometry_msgs::PoseStamped>
         ("/pose_cmd_2_drone", 10, &drone_connection::pose_cmd_cb, this); // 19.2 Hz
-    pose_sub_sim = nh.subscribe<nav_msgs::Odometry>
-        ("/mavros/odometry/out", 10, &drone_connection::sim_pose_cb, this);  // 19.2 Hz
-    pose_sub_real = nh.subscribe<geometry_msgs::PoseStamped>
-        ("/optitrack/pose", 10, &drone_connection::real_pose_cb, this);  
+    pose_sub_nav_msg_odom = nh.subscribe<nav_msgs::Odometry> 
+        ("/mavros/odometry/out", 10, &drone_connection::poseCallback_nav_msg_odom, this);  // 19.2 Hz
+        //("/camera/odom/sample_throttled", 10, &drone_connection::sim_pose_cb, this);  // = tracking cam
+    pose_sub_geomtry_msg_pose = nh.subscribe<geometry_msgs::PoseStamped>
+        ("/optitrack/pose", 10, &drone_connection::poseCallback_geomtry_msg_pose, this);  
         // ("/mavros/vision_pose/pose", 10, &drone_connection::real_pose_cb, this);  
     
     /* --- Sending CMDS to Drone --- */
+
     pose_pub = nh.advertise<geometry_msgs::PoseStamped>
         ("/mavros/setpoint_position/local", 10);
     cmd_vel_unstmpd_pub = nh.advertise<geometry_msgs::Twist>
@@ -172,24 +197,17 @@ drone_connection::drone_connection(ros::NodeHandle& nh)
         ("/yaw/control_effort", 10, &drone_connection::yaw_pid_cb, this);
 
     /* --- ROS PID Controller --- */  
-     
-
-    start_pose.pose.position.x = takeoff.position.x; // -1
-    start_pose.pose.position.y = takeoff.position.y; // 2
-    start_pose.pose.position.z = takeoff.position.z; // 1.2
-
-    tf2::Quaternion quaternion;
-    quaternion.setRPY(takeoff.orientation.x, takeoff.orientation.y, takeoff.orientation.z);
-
-    start_pose.pose.orientation.x = quaternion.getX();
-    start_pose.pose.orientation.y = quaternion.getY();
-    start_pose.pose.orientation.z = quaternion.getZ();
-    start_pose.pose.orientation.w = quaternion.getW(); 
    
     vel_cmd_received = false;
     pose_cmd_received = false;
     vel_anomalie_detected = false;
-    new_pose_received = false;
+    drone_pose_received = false;
+
+    // this is necessary otherwise the calc. orientation will be n.a.n.:
+    curr_pose_temp.pose.orientation.w = 1; 
+    curr_pose.pose.orientation.w = 1;
+    target_frame = "odom";
+    source_frame = "base_link";
     
     // vel_calc_x = 0;
     // vel_calc_y = 0;
@@ -197,7 +215,6 @@ drone_connection::drone_connection(ros::NodeHandle& nh)
 
     vel_threshold_lin = 0.45;       // 0.4 m/s
     vel_threshold_ang = M_PI / 3 ; //= 1.047 rad per second = 60 degree / s
-    sim_or_real = 0;
 
     ros_time_last = ros::Time::now(); 
 
@@ -216,20 +233,38 @@ void drone_connection::mavros_state_cb(const mavros_msgs::State::ConstPtr& msg){
     current_mav_state = *msg;
 }
 
-void drone_connection::sim_pose_cb(const nav_msgs::Odometry::ConstPtr& msg){
-    curr_pose_sim = *msg;
+void drone_connection::poseCallback_nav_msg_odom(const nav_msgs::Odometry::ConstPtr& msg){
     
-    // conversion to geometry_msgs:
-    curr_pose.pose = curr_pose_sim.pose.pose;
-    curr_pose.header = curr_pose_sim.header;
+    if(tracking_camera == false){
+        drone_pose_received = true;
+        curr_pose_sim = *msg;
+    }
 
-    new_pose_received = true;
+    // The following is necessary because the tracking camera publishes only a topic in respect to the camera_odom_frame 
+    // but since this frame is at (0.16, 0, 0.205) at start up and not (0, 0, 0) we need the pose of the cam
+    // in respect to the odom frame
+    if(tracking_camera == true){ 
+        // to evade some error msgs at the startup
+        if (tf_buffer.canTransform(target_frame, source_frame, ros::Time(0))) {
+            try{
+                tf_odom_to_camera = tf_buffer.lookupTransform(target_frame, source_frame, ros::Time(0));
+            } catch (tf2::TransformException ex){
+                ROS_ERROR("%s",ex.what());
+            }
+            tf2::doTransform(curr_pose_temp, curr_pose, tf_odom_to_camera);
+        }
+        else {
+        ROS_WARN("Transform not available yet, waiting...");
+        ros::Duration(1).sleep();
+        }
+        drone_pose_received = true;    
+    }
 }
 
-void drone_connection::real_pose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg){
-    curr_pose_real = *msg;
-    curr_pose = curr_pose_real;
-    new_pose_received = true;
+
+void drone_connection::poseCallback_geomtry_msg_pose(const geometry_msgs::PoseStamped::ConstPtr& msg){
+    curr_pose = *msg;
+    drone_pose_received = true;
 }
 
 void drone_connection::pose_cmd_cb(const geometry_msgs::PoseStamped::ConstPtr& msg){
@@ -297,24 +332,14 @@ void drone_connection::pub_to_ros_pid(){
     
 }
 
-
 void drone_connection::calc_cntrl_vel(){
 
     
         passed_time = ros::Time::now() - ros_time_last; // = 0.052 sec = aprx. 20 hz
         ros_time_last = ros::Time::now();
-
-        // calc k controller values:
-        // vel_calc_x = x_pid_out / passed_time.toSec();
-        // vel_calc_y = y_pid_out / passed_time.toSec();
-        // vel_calc_z = z_pid_out / passed_time.toSec();
-
-        //std::cout << "calculated vel.: "<< vel_calc_x << std::endl;
-        //std::cout << "real vel.:       "<< vel_cmd_in.linear.z << "\n---\n";
         
         std::cout << std::fixed << std::showpoint << std::setprecision(6);
         std::cout << "Passed time: "<< passed_time.toSec() <<"\n";
-
 
         vel_cmd_send.linear.x = x_pid_out / passed_time.toSec(); // using instead of passed_time the sampling_interval of the trajectory = 0.05 sec (see traj_gen_real_drone.cpp)
         vel_cmd_send.linear.y = y_pid_out / passed_time.toSec(); // or using the mean of he passed_times
@@ -325,11 +350,12 @@ void drone_connection::calc_cntrl_vel(){
 
  void drone_connection::calc_error() {
 
+    // not used right now...
+    /*
     error_pose.position.x = pose_cmd_in.pose.position.x - curr_pose.pose.position.x;
     error_pose.position.y = pose_cmd_in.pose.position.y - curr_pose.pose.position.y;
     error_pose.position.z = pose_cmd_in.pose.position.z - curr_pose.pose.position.z;
 
-    /*
     error_pose.orientation.x = pose_cmd_in.pose.orientation.x - curr_pose.pose.orientation.x;
     error_pose.orientation.y = pose_cmd_in.pose.orientation.y - curr_pose.pose.orientation.y;
     error_pose.orientation.z = pose_cmd_in.pose.orientation.z - curr_pose.pose.orientation.z;
@@ -395,14 +421,23 @@ int drone_connection::establish_connection_and_take_off()
     ros::Rate rate20(20.0);
 
     // wait for FCU connection
-    while(ros::ok() && !current_mav_state.connected){
-
+    while(current_mav_state.connected == false || drone_pose_received == false){
         ros::spinOnce();
         rate20.sleep();
     }
 
-    // Set the frame in which the velocties are  interpreted by the drone
-    set_frame_msg.request.mav_frame = set_frame_msg.request.FRAME_LOCAL_NED;  // FRAME_LOCAL_NED = world, FRAME_BODY_NED = drone
+    if(drone_pose_received == true){
+        safety_takeoff_pose.pose.position.x = 0.0;
+        safety_takeoff_pose.pose.position.y = 0.0;
+        safety_takeoff_pose.pose.position.z = 1.0;
+        safety_takeoff_pose.pose.orientation = curr_pose.pose.orientation;
+    }
+
+    // Set the frame in which the velocties are interpreted by the drone
+    //!!!-----------------------------------------------------------------------
+    set_frame_msg.request.mav_frame = set_frame_msg.request.FRAME_LOCAL_NED; //| FRAME_LOCAL_NED = world, FRAME_BODY_NED = drone
+    //!!!-----------------------------------------------------------------------
+    
     offb_set_mode.request.custom_mode = "OFFBOARD";
     arm_cmd.request.value = true;
     std::cout << "\nMavframe set: ";
@@ -412,18 +447,19 @@ int drone_connection::establish_connection_and_take_off()
     
     //send a few setpoints before starting to establish the offboard connection
     for(int i = 50; ros::ok() && i > 0; --i){
-        pose_pub.publish(start_pose);
+        pose_pub.publish(safety_takeoff_pose);
         ros::spinOnce();
         rate20.sleep();
     }
 
     ros::Time last_request = ros::Time::now();
 
-    bool start_hight_reached = false;
+    bool safety_takeoff_hight_reached = false;
     bool offb_entered = false;  
     bool armed_once = false;
 
-    while(ros::ok()){
+    while(ros::ok())
+    {
         if(  current_mav_state.mode != "OFFBOARD" &&
             (ros::Time::now() - last_request > ros::Duration(5.0)) &&
              offb_entered == false){
@@ -433,7 +469,8 @@ int drone_connection::establish_connection_and_take_off()
                 offb_entered = true; // to ensure that the drone does not enter in the offb mode again after taking the commando with the remote control
             }
             last_request = ros::Time::now();
-        } else {    
+        } 
+        else {    
             if( !current_mav_state.armed &&
                (ros::Time::now() - last_request > ros::Duration(5.0)) &&
                 armed_once == false ){
@@ -446,14 +483,20 @@ int drone_connection::establish_connection_and_take_off()
             }
         }
 
-        if(curr_pose.pose.position.z >= start_pose.pose.position.z - 0.1 && start_hight_reached == false) {
-            ROS_INFO("Start hight reached.");
-            start_hight_reached = true;
+        if(curr_pose.pose.position.z < safety_takeoff_pose.pose.position.z && safety_takeoff_hight_reached == false) {
+            pose_pub.publish(safety_takeoff_pose);
         }
         
-        pose_pub.publish(start_pose);
+        if(curr_pose.pose.position.z > safety_takeoff_pose.pose.position.z - 0.1 && safety_takeoff_hight_reached == false) {
+            safety_takeoff_hight_reached = true;
+            ROS_INFO("Safety takeoff hight reached.");
+        }
 
-        // safety first
+        if(safety_takeoff_hight_reached == true) {
+            ROS_INFO("Publishing Start Pose");
+            pose_pub.publish(start_pose);
+        }
+        
         if(vel_cmd_sub.getNumPublishers() > 0 && vel_cmd_received == true){
             ROS_INFO("Trajectory velocity publisher detected.");
             return 0;
@@ -472,7 +515,9 @@ int drone_connection::establish_connection_and_take_off()
 
 int main(int argc, char **argv)
 {
-    ros::init(argc, argv, "traj_gen");
+    ros::init(argc, argv, "drone_connection");
+
+
     ros::NodeHandle node_handle("~");
     ros::AsyncSpinner ich_spinne(1);
     ich_spinne.start();
@@ -480,20 +525,9 @@ int main(int argc, char **argv)
     drone_connection drone(std::ref(node_handle));
     std::cout << "Start pose: \n" << drone.start_pose.pose;
     std::cout << "Using controller: " << drone.use_cntrl;
-
-    
-    // i think i can delete this check again bc. I wont need it...
-    /*
-    try {drone.get_sim_or_real();}
-    catch (const std::runtime_error& e) {
-        std::cerr << "Error: " << e.what() << std::endl;
-        return -1;
-    }
-    */
+    ros::Rate rate40(40);
 
     drone.establish_connection_and_take_off();
-
-    ros::Rate rate40(40);
 
     ROS_INFO("Publishing velocitiess now...");
     // check if commands are recived for flying the trajectory

@@ -12,6 +12,7 @@
 
     <arg name="cntrl" default="true"/>
     <arg name="simulation" default="false"/>
+    <arg name="tracking_camera" default="false"/>
     
     <!-- Drone connection--> 
  
@@ -24,20 +25,28 @@
       <param name="P_takeoff" value="$(arg P)" />
       <param name="Y_takeoff" value="$(arg Y)" />
 
-      <param name="use_cntrl" value="$(arg cntrl)" />
-      
+      <param name="use_cntrl" value="$(arg cntrl)" /> 
+      <param name="simulation" value="$(arg simulation)" />    
+      <param name="tracking_camera" value="$(arg tracking_camera)" />    
+
+        
     </node>
 
 
-  <node pkg="hector_trajectory_server" type="hector_trajectory_server" name="trajectory_server_loam" ns="gt" >
+<!-- One path painting server if the source frame is base_link -->
+  <node pkg="hector_trajectory_server" type="hector_trajectory_server" name="trajectory_server_loam" ns="base_link" >
         <param name="/target_frame_name" value="odom" />
         <param name="/trajectory_update_rate" value="10.0" />
         <param name="/trajectory_publish_rate" value="10.0" />
-
-        <param name="/source_frame_name" value="base_link" if="$(arg simulation)" />
-        <param name="/source_frame_name" value="cine_mpc" unless="$(arg simulation)" />
+        <param name="/source_frame_name" value="base_link" />
   </node>
 
-    
+<!-- The other path painting server if the source frame is cine_mpc -->
+  <node pkg="hector_trajectory_server" type="hector_trajectory_server" name="trajectory_server_loam" ns="cine_mpc" >
+        <param name="/target_frame_name" value="odom" />
+        <param name="/trajectory_update_rate" value="10.0" />
+        <param name="/trajectory_publish_rate" value="10.0" />
+        <param name="/source_frame_name" value="cine_mpc" />
+  </node>
 
 </launch>

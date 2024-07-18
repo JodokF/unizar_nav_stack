@@ -35,6 +35,7 @@
 #include <mavros_msgs/State.h>
 #include <iomanip> 
 
+// for the camera tf frame transformation:
 #include <tf/tf.h>
 #include <tf2_ros/transform_listener.h>
 #include <tf2_sensor_msgs/tf2_sensor_msgs.h>
@@ -46,12 +47,12 @@
 class poly_traj_plan{
     private:
 
-        bool waypoints_received, odom_received, goal_recieved, planner_service_called;
+        bool waypoints_received, odom_received, goal_recieved, planner_service_called, tracking_camera;
         int nmbr_of_states, curr_state, waypoint_cntr, marker_cntr;
         
-        ros::Subscriber plan_sub, pose_sub_real, pose_sub_sim, goal_sub;
+        ros::Subscriber plan_sub, pose_sub_geomtry_msg_pose, pose_sub_nav_msg_odom, goal_sub;
         ros::Publisher vel_pub, mav_traj_markers_pub, marker_pub, pose_pub;
-        std::string odom_topic, default_odom_topic, goal_topic, default_goal_topic, planner_service;
+        std::string pose_nav_msg_odom_msg_topic, default_odom_topic, goal_topic, default_goal_topic, planner_service;
 
         mav_trajectory_generation::Trajectory trajectory;
         mav_trajectory_generation::Vertex::Vector vertices;
@@ -60,28 +61,30 @@ class poly_traj_plan{
         geometry_msgs::PoseArray vxblx_waypoints;
         // std::vector<geometry_msgs::Pose> trajectory;
         nav_msgs::Odometry odom_info;
+        geometry_msgs::PoseStamped odom_info_geo_msg;
         geometry_msgs::PoseStamped goal;
         geometry_msgs::PoseStamped cmd_pose;
         geometry_msgs::Twist cmd_vel;
-        // hector_uav_msgs::EnableMotors motor_enable_service_msg;
+        
         std_srvs::Empty path_plan_req;
         ros::ServiceClient motor_enable_service; 
         ros::ServiceClient path_plan_client;
 
-        double altitude_factor, x_offset;
+        
+        // for the camera tf frame transformation:
+        geometry_msgs::TransformStamped tf_odom_to_camera;
+        geometry_msgs::PoseStamped temp_pose;
+        tf2_ros::Buffer tf_buffer;
+        tf2_ros::TransformListener tf_listener; 
+        std::string target_frame, source_frame;
 
-        struct flying_eight {
-            double x;
-            double y;
-            double z;
-            double yaw;
-            double vel_z;
-        };
+
+        double altitude_factor, x_offset;
 
 
         // functions:
-        void poseCallbackSim(const nav_msgs::Odometry::ConstPtr &msg);
-        void poseCallbackReal(const geometry_msgs::PoseStamped::ConstPtr &msg);
+        void poseCallback_nav_msg_odom(const nav_msgs::Odometry::ConstPtr &msg);
+        void poseCallback_geomtry_msg_pose(const geometry_msgs::PoseStamped::ConstPtr &msg);
         void planCallback(const geometry_msgs::PoseArray::ConstPtr &msg);
         void goalCallback(const geometry_msgs::PoseStamped::ConstPtr &msg);
         void drawMAVTrajectoryMarkers();

@@ -27,6 +27,8 @@
   <depend>roslib</depend>
   <depend>hector_uav_msgs</depend>
   <depend>hector_moveit_actions</depend>
+    <depend>tf2</depend>
+  <depend>tf2_ros</depend>
 
   <export>
 
