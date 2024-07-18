@@ -238,6 +238,8 @@ void drone_connection::poseCallback_nav_msg_odom(const nav_msgs::Odometry::Const
     if(tracking_camera == false){
         drone_pose_received = true;
         curr_pose_sim = *msg;
+        curr_pose.header = curr_pose_sim.header;
+        curr_pose.pose = curr_pose_sim.pose.pose;
     }
 
     // The following is necessary because the tracking camera publishes only a topic in respect to the camera_odom_frame 
@@ -427,10 +429,8 @@ int drone_connection::establish_connection_and_take_off()
     }
 
     if(drone_pose_received == true){
-        safety_takeoff_pose.pose.position.x = 0.0;
-        safety_takeoff_pose.pose.position.y = 0.0;
+        safety_takeoff_pose = curr_pose;
         safety_takeoff_pose.pose.position.z = 1.0;
-        safety_takeoff_pose.pose.orientation = curr_pose.pose.orientation;
     }
 
     // Set the frame in which the velocties are interpreted by the drone
@@ -493,7 +493,6 @@ int drone_connection::establish_connection_and_take_off()
         }
 
         if(safety_takeoff_hight_reached == true) {
-            ROS_INFO("Publishing Start Pose");
             pose_pub.publish(start_pose);
         }
         

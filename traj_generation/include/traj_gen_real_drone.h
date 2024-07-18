@@ -47,7 +47,8 @@
 class poly_traj_plan{
     private:
 
-        bool waypoints_received, odom_received, goal_recieved, planner_service_called, tracking_camera;
+        bool waypoints_received, odom_received, goal_recieved;
+        bool planner_service_called, tracking_camera;
         int nmbr_of_states, curr_state, waypoint_cntr, marker_cntr;
         
         ros::Subscriber plan_sub, pose_sub_geomtry_msg_pose, pose_sub_nav_msg_odom, goal_sub;
@@ -96,7 +97,7 @@ class poly_traj_plan{
         
 
     public:
-
+        bool vxblx;
         poly_traj_plan(ros::NodeHandle& nh);
         mav_msgs::EigenTrajectoryPoint::Vector traj_states;
         double takeoff_altitude, sampling_interval, vel_threshold;

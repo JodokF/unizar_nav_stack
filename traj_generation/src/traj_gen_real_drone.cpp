@@ -275,44 +275,44 @@ int poly_traj_plan::run_navigation_node(){
                                                             << goal.pose.position.z << ") \n---\n";
 
 
-    // start_pose is assigened in the odom callback
-    /*
-    request.request.start_pose.pose.position.x = odom_info.pose.pose.position.x;
-    request.request.start_pose.pose.position.y = odom_info.pose.pose.position.y;
-    request.request.start_pose.pose.position.z = odom_info.pose.pose.position.z; 
+    if(vxblx == true)
+    {
+        request.request.start_pose.pose.position.x = odom_info.pose.pose.position.x;
+        request.request.start_pose.pose.position.y = odom_info.pose.pose.position.y;
+        request.request.start_pose.pose.position.z = odom_info.pose.pose.position.z; 
 
-    request.request.goal_pose.pose.position.x = goal.pose.position.x;
-    request.request.goal_pose.pose.position.y = goal.pose.position.y;
-    request.request.goal_pose.pose.position.z = goal.pose.position.z;
+        request.request.goal_pose.pose.position.x = goal.pose.position.x;
+        request.request.goal_pose.pose.position.y = goal.pose.position.y;
+        request.request.goal_pose.pose.position.z = goal.pose.position.z;
 
-    // requesting voxblox-rrt-planner to plan:
-    try {
-        if (!ros::service::call(planner_service, request)) {
-            ROS_WARN_STREAM("Couldn't call service: " << planner_service);
-            return -1;
+        // requesting voxblox-rrt-planner to plan:
+        try {
+            if (!ros::service::call(planner_service, request)) {
+                ROS_WARN_STREAM("Couldn't call service: " << planner_service);
+                return -1;
+            }
+            else ROS_INFO("Planner Service called.");
+        } 
+        catch (const std::exception& e) {
+            ROS_ERROR_STREAM("Service Exception: " << e.what());
         }
-        else ROS_INFO("Planner Service called.");
-    } 
-    catch (const std::exception& e) {
-        ROS_ERROR_STREAM("Service Exception: " << e.what());
-    }
-    
-    // requesting waypoints from planner to be published:
-    if (path_plan_client.call(path_plan_req)) {
-        ROS_INFO("Planer Publisher called successfully");
-    } else {
-        ROS_ERROR_STREAM("Failed to call service publish_path");
-    }
+        
+        // requesting waypoints from planner to be published:
+        if (path_plan_client.call(path_plan_req)) {
+            ROS_INFO("Planer Publisher called successfully");
+        } else {
+            ROS_ERROR_STREAM("Failed to call service publish_path");
+        }
 
-    // waiting for waypoints to recive
-    while(!waypoints_received){
-        std::cout << "Waiting for RRT Waypoints.\n";
-        ros::Duration(1).sleep();
-        while_loop_ctrl++;
-        if (while_loop_ctrl == 5) return -1;
+        // waiting for waypoints to recive
+        while(!waypoints_received){
+            std::cout << "Waiting for RRT Waypoints.\n";
+            ros::Duration(1).sleep();
+            while_loop_ctrl++;
+            if (while_loop_ctrl == 5) return -1;
+        }
+        while_loop_ctrl = 0;
     }
-    while_loop_ctrl = 0;
-    */
 
     if (generate_trajectory() == true) return 0;
     else return -1;
@@ -447,7 +447,6 @@ bool poly_traj_plan::generate_trajectory() {
 */  
     // delete the first and last entry of the recived trajectory waypoints 
     // becaue they are already considered in start and goal vertices
-    // commented for debugging without voxblox
     full_eight.erase(full_eight.begin());
     full_eight.erase(full_eight.end() - 1);
 
@@ -636,6 +635,8 @@ int main(int argc, char** argv){
     poly_traj_plan ptp(std::ref(node_handle));
     int current_traj_state = 0;
 
+    ptp.vxblx = false;
+    // to-do -> ask user if he likes vxblx or hardcoded trajectories
     bool traj_checker = false;
 
         // run the navigation node and get the trajectory    
@@ -664,6 +665,7 @@ int main(int argc, char** argv){
             ros::Duration(ptp.sampling_interval).sleep();
             // ros::Duration(0.05).sleep();
         }
+
 
     }
 

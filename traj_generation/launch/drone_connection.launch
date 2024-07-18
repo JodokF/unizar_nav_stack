@@ -10,7 +10,7 @@
     <arg name="P" default="0"/>
     <arg name="Y" default="0.7854"/> <!-- 0.7854 = 45 grad = PI / 4  -->
 
-    <arg name="cntrl" default="true"/>
+    <arg name="cntrl" default="false"/>
     <arg name="simulation" default="false"/>
     <arg name="tracking_camera" default="false"/>
     
