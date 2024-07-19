@@ -260,7 +260,7 @@ int poly_traj_plan::run_navigation_node(){
         ros::Duration(1).sleep();
         std::cout << "Waiting for odom or goal.\n";
         while_loop_ctrl++;
-        if (while_loop_ctrl == 15) 
+        if (while_loop_ctrl == 10) 
             return -1;
     }
     while_loop_ctrl = 0;
@@ -335,12 +335,10 @@ bool poly_traj_plan::generate_trajectory() {
         geometry_msgs::Pose pose;
         nav_msgs::Odometry wp0, wp1, wp2, wp3, wp4, wp5, wp6, wp7, wp8; // wp = waypoint, wp0 & wp8 = start & end
     
-        vel_threshold = 0.3;//0.8; // geneal vel. limit
-        double x_y_vel = vel_threshold * 0.44; // worked the best for the flying ocho
-        double z_vel_lin = x_y_vel / 2;       // sets the steepnes of the fyling ocho (right?)
+        vel_threshold = 0.6; // geneal vel. limit for the traj. gen. see further down - 0.6 seems to work good - 
+        double x_y_vel = vel_threshold * 0.44; //0.44 worked the best for the flying ocho
+        double z_vel_lin = x_y_vel / 2;       // sets the steepnes of the fyling ocho 
         double z_vel_ang = 0.3;
-
-        double z_pos = 2;
     
         wp1.pose.pose.position.x = 1.22 - x_offset;
         wp1.pose.pose.position.y = 0.71;

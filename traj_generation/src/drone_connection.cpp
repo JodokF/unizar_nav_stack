@@ -90,6 +90,7 @@ class drone_connection{
         double time_last, vel_threshold_lin, vel_threshold_ang; 
         double vel_calc_x, vel_calc_y, vel_calc_z;
         bool vel_anomalie_detected;
+        int delay_cntr;
 
     public:
         geometry_msgs::PoseStamped start_pose, safety_takeoff_pose;
@@ -99,6 +100,7 @@ class drone_connection{
         void calc_error();
         void send_vel_cmds_to_drone();
         int establish_connection_and_take_off();
+        int debug_cntr;
         ros::Time ros_time_last, ros_time_now;
         ros::Duration passed_time;
         drone_connection(ros::NodeHandle& nh);
@@ -213,10 +215,12 @@ drone_connection::drone_connection(ros::NodeHandle& nh)
     // vel_calc_y = 0;
     // vel_calc_z = 0;
 
-    vel_threshold_lin = 0.45;       // 0.4 m/s
+    vel_threshold_lin = 5; // too high now, just for tests...       // 0.4 m/s
     vel_threshold_ang = M_PI / 3 ; //= 1.047 rad per second = 60 degree / s
 
     ros_time_last = ros::Time::now(); 
+    debug_cntr = 0;
+    delay_cntr = 0;
 
 }
 
@@ -330,8 +334,6 @@ void drone_connection::pub_to_ros_pid(){
     yaw_state.data = get_yaw_difference(tf::getYaw(pose_cmd_in.pose.orientation), tf::getYaw(curr_pose.pose.orientation));
     yaw_pid_setp_pub.publish(yaw_setp);
     yaw_pid_state_pub.publish(yaw_state);
-    
-    
 
 }
 
@@ -341,11 +343,12 @@ void drone_connection::calc_cntrl_vel(){
         ros_time_last = ros::Time::now();
         
         std::cout << std::fixed << std::showpoint << std::setprecision(6);
-        std::cout << "Passed time: "<< passed_time.toSec() <<"\n";
+        std::cout << "\n---\n"<< debug_cntr << ". Passed time: "<< passed_time.toSec() <<"\n";
+        debug_cntr++;
 
-        vel_cmd_send.linear.x = x_pid_out / passed_time.toSec(); // using instead of passed_time the sampling_interval of the trajectory = 0.05 sec (see traj_gen_real_drone.cpp)
-        vel_cmd_send.linear.y = y_pid_out / passed_time.toSec(); // or using the mean of he passed_times
-        vel_cmd_send.linear.z = z_pid_out / passed_time.toSec(); 
+        vel_cmd_send.linear.x  = x_pid_out   / passed_time.toSec(); // using instead of passed_time the sampling_interval of the trajectory = 0.05 sec (see traj_gen_real_drone.cpp)
+        vel_cmd_send.linear.y  = y_pid_out   / passed_time.toSec(); // or using the mean of he passed_times
+        vel_cmd_send.linear.z  = z_pid_out   / passed_time.toSec(); 
         vel_cmd_send.angular.z = yaw_pid_out / passed_time.toSec();
         
 }
@@ -378,7 +381,7 @@ void drone_connection::calc_cntrl_vel(){
                 << vel_cmd_send.linear.x << ", "
                 << vel_cmd_send.linear.y << ", "
                 << vel_cmd_send.linear.z << ") - "
-                << vel_cmd_send.angular.z << "\n ---";
+                << vel_cmd_send.angular.z;
     
 
     // if the calculatet velocity is under the vel_threshold -> publish it
@@ -488,8 +491,11 @@ int drone_connection::establish_connection_and_take_off()
         }
         
         if(curr_pose.pose.position.z > safety_takeoff_pose.pose.position.z - 0.1 && safety_takeoff_hight_reached == false) {
-            safety_takeoff_hight_reached = true;
-            ROS_INFO("Safety takeoff hight reached.");
+            //if (delay_cntr == 100){
+                safety_takeoff_hight_reached = true;
+                ROS_INFO("Safety takeoff hight reached.");
+            //}
+            //delay_cntr++;
         }
 
         if(safety_takeoff_hight_reached == true) {
@@ -516,7 +522,6 @@ int main(int argc, char **argv)
 {
     ros::init(argc, argv, "drone_connection");
 
-
     ros::NodeHandle node_handle("~");
     ros::AsyncSpinner ich_spinne(1);
     ich_spinne.start();
@@ -533,7 +538,9 @@ int main(int argc, char **argv)
 
     
     drone.ros_time_last = ros::Time::now(); 
-    rate40.sleep(); // if no sleep the first passed time is 0 and then division by zero
+    // if no sleep the first passed time is 0 and then division by zero -> hell
+    // if only one rate40.sleep() still division by zero, but idk why... :/
+    for(int i = 0; i < 3; i++) rate40.sleep();
 
     if (drone.pose_cmd_received == true || drone.vel_cmd_received == true){
         if(drone.use_cntrl == true){ // check if controller should be used
