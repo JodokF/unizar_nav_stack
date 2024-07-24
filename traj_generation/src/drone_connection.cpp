@@ -260,12 +260,12 @@ void drone_connection::poseCallback_nav_msg_odom(const nav_msgs::Odometry::Const
                 ROS_ERROR("%s",ex.what());
             }
             tf2::doTransform(curr_pose_temp, curr_pose, tf_odom_to_camera);
+            drone_pose_received = true;    
         }
         else {
         ROS_WARN("Transform not available yet, waiting...");
         ros::Duration(1).sleep();
         }
-        drone_pose_received = true;    
     }
 }
 

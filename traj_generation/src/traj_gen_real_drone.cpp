@@ -107,13 +107,14 @@ void poly_traj_plan::poseCallback_nav_msg_odom(const nav_msgs::Odometry::ConstPt
         
             odom_info.header = odom_info_geo_msg.header; 
             odom_info.pose.pose = odom_info_geo_msg.pose;
+            odom_received = true;
         }
         else {
         ROS_WARN("Transform not available yet, waiting...");
         ros::Duration(0.5).sleep();
         }
 
-        odom_received = true;
+        
     }
 }
 
@@ -475,81 +476,86 @@ bool poly_traj_plan::generate_hardcoded_traj()
     vel_threshold = 0.6; // geneal vel. limit for the traj. gen. see further down - 0.6 seems to work good  
     double x_y_vel = vel_threshold * 0.44; //0.44 worked the best for the flying ocho
     double z_vel_lin = 0;       // sets the steepnes of the fyling ocho 
-    double z_vel_ang = 0.3;
+    double z_vel_ang = 0.1;
+    double mas_menos = 0.2;
 
     geometry_msgs::Pose pose;
     nav_msgs::Odometry wp0, wp1, wp2, wp3, wp4, wp5, wp6, wp7, wp8; // wp = waypoint, wp0 & wp8 = start & end
 
 // Square
 
-        wp1.pose.pose.position.x = -1.5;
-        wp1.pose.pose.position.y = -1.5;
-        wp1.pose.pose.position.z = 1.5;//2.61 - altitude_factor;
-        wp1.pose.pose.orientation.z = -M_PI/2; // we use it now as if it were yaw and not a quaternion
-        wp1.twist.twist.linear.x = 0;
-        wp1.twist.twist.linear.y = - x_y_vel; 
-        wp1.twist.twist.linear.z = z_vel_lin;
-        wp1.twist.twist.angular.z = z_vel_ang;
-    
-        wp2.pose.pose.position.x = 1.5;
-        wp2.pose.pose.position.y = -1.5;
-        wp2.pose.pose.position.z = 1.5;
-        wp2.pose.pose.orientation.z = 0; // we use it now as if it were yaw and not a quaternion
-        wp2.twist.twist.linear.x = x_y_vel;
-        wp2.twist.twist.linear.y = 0; 
-        wp2.twist.twist.linear.z = 0;
-        wp2.twist.twist.angular.z = z_vel_ang;
+// middle point:
+    wp1.pose.pose.position.x = -1.5;
+    wp1.pose.pose.position.y = 0;
+    wp1.pose.pose.position.z = 1.5;
+    wp1.pose.pose.orientation.z = -M_PI/2; // we use it now as if it were yaw and not a quaternion
+    wp1.twist.twist.linear.x = 0;
+    wp1.twist.twist.linear.y = - x_y_vel - mas_menos; 
+    wp1.twist.twist.linear.z = 0;
+    wp1.twist.twist.angular.z = 0;
 
-        wp3.pose.pose.position.x = 1.5;//1.22 - x_offset;
-        wp3.pose.pose.position.y = 1.5;
-        wp3.pose.pose.position.z = 1.5;
-        wp3.pose.pose.orientation.z = M_PI/2; 
-        wp3.twist.twist.linear.x = 0;
-        wp3.twist.twist.linear.y = x_y_vel; 
-        wp3.twist.twist.linear.z = -z_vel_lin;
-        wp3.twist.twist.angular.z = z_vel_ang;
+// corner point:
+    wp2.pose.pose.position.x = -1.5;
+    wp2.pose.pose.position.y = -1.5;
+    wp2.pose.pose.position.z = 1.5;
+    wp2.pose.pose.orientation.z = -M_PI/2;
+    wp2.twist.twist.linear.x = 0;
+    wp2.twist.twist.linear.y = - x_y_vel + mas_menos; 
+    wp2.twist.twist.linear.z = 0;
+    wp2.twist.twist.angular.z = z_vel_ang;
 
-        // Middlepoint:
-        wp4.pose.pose.position.x = 0;
-        wp4.pose.pose.position.y = 0;
-        wp4.pose.pose.position.z = 0;
-        wp4.pose.pose.orientation.z = -(5*M_PI)/4; 
-        wp4.twist.twist.linear.x = -x_y_vel;
-        wp4.twist.twist.linear.y =  x_y_vel; 
-        wp4.twist.twist.linear.z = -z_vel_lin;
-        wp4.twist.twist.angular.z = 0;
+// middle point:
+    wp3.pose.pose.position.x = 0;
+    wp3.pose.pose.position.y = -1.5;
+    wp3.pose.pose.position.z = 1.5;
+    wp3.pose.pose.orientation.z = 0; 
+    wp3.twist.twist.linear.x = x_y_vel + mas_menos;
+    wp3.twist.twist.linear.y = 0; 
+    wp3.twist.twist.linear.z = 0;
+    wp3.twist.twist.angular.z = 0;
 
-/*
-    wp5.pose.pose.position.x = -1.22;
-    wp5.pose.pose.position.y = 0.71;
-    wp5.pose.pose.position.z = 1.39 - altitude_factor;
-    wp5.pose.pose.orientation.z = - M_PI; 
-    wp5.twist.twist.linear.x = -x_y_vel;
-    wp5.twist.twist.linear.y = 0; 
-    wp5.twist.twist.linear.z = -z_vel_lin;
-    wp5.twist.twist.angular.z = z_vel_ang;
+// corner point:
+    wp4.pose.pose.position.x = 1.45;
+    wp4.pose.pose.position.y = -1.5;
+    wp4.pose.pose.position.z = 1.5;
+    wp4.pose.pose.orientation.z = 0; 
+    wp4.twist.twist.linear.x = x_y_vel - mas_menos;
+    wp4.twist.twist.linear.y = 0; 
+    wp4.twist.twist.linear.z = 0;
+    wp4.twist.twist.angular.z = z_vel_ang;
 
-    wp6.pose.pose.position.x = -2;
-    wp6.pose.pose.position.y = 0;
-    wp6.pose.pose.position.z = 1 - altitude_factor;
-    wp6.pose.pose.orientation.z = (-M_PI)/2; 
+// middle point:
+    wp5.pose.pose.position.x = 1.5;
+    wp5.pose.pose.position.y = 0;
+    wp5.pose.pose.position.z = 1.5;
+    wp5.pose.pose.orientation.z = M_PI/2; 
+    wp5.twist.twist.linear.x = 0;
+    wp5.twist.twist.linear.y = x_y_vel + mas_menos; 
+    wp5.twist.twist.linear.z = 0;
+    wp5.twist.twist.angular.z = 0;
+
+// corner point:
+    wp6.pose.pose.position.x = 1.5;
+    wp6.pose.pose.position.y = 1.4;
+    wp6.pose.pose.position.z = 1.5;
+    wp6.pose.pose.orientation.z = M_PI/2; 
     wp6.twist.twist.linear.x = 0;
-    wp6.twist.twist.linear.y = -x_y_vel; 
-    wp6.twist.twist.linear.z = 0;
+    wp6.twist.twist.linear.y = x_y_vel - mas_menos; 
+    wp6.twist.twist.linear.z = -z_vel_lin;
     wp6.twist.twist.angular.z = z_vel_ang;
 
-    wp7.pose.pose.position.x = -1.22;
-    wp7.pose.pose.position.y = -0.71;
-    wp7.pose.pose.position.z = 1.39 - altitude_factor;
-    wp7.pose.pose.orientation.z = 0; 
-    wp7.twist.twist.linear.x = x_y_vel;
-    wp7.twist.twist.linear.y = 0; 
-    wp7.twist.twist.linear.z = z_vel_lin;
-    wp7.twist.twist.angular.z = z_vel_ang;
+// middle point:
+    wp7.pose.pose.position.x = 0;
+    wp7.pose.pose.position.y = 1.5;
+    wp7.pose.pose.position.z = 1.5;
+    wp7.pose.pose.orientation.z = M_PI; 
+    wp7.twist.twist.linear.x = -x_y_vel - mas_menos;
+    wp7.twist.twist.linear.y =  0; 
+    wp7.twist.twist.linear.z = 0;
+    wp7.twist.twist.angular.z = 0;
 
-*/
 
-    traj_wp = {wp0, wp1, wp2, wp3, wp4}; //  wp5, wp6, wp7, wp8};
+    traj_wp = {wp0, wp1, wp2, wp3, wp4, wp5, wp6, wp7, wp8};
 
 
     // Definition of the trajectory beginning, end and intermediate constraints

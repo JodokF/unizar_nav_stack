@@ -10,6 +10,7 @@ Panels:
         - /Path1
         - /Optitrack1
         - /EKF21
+        - /RobotModel2
       Splitter Ratio: 0.5
     Tree Height: 440
   - Class: rviz/Selection
@@ -94,6 +95,11 @@ Visualization Manager:
         Expand Link Details: false
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
+        base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
       Name: RobotModel
       Robot Description: robot_description
       TF Prefix: ""
@@ -114,7 +120,7 @@ Visualization Manager:
         cine_mpc:
           Value: true
         map:
-          Value: true
+          Value: false
         map_ned:
           Value: false
         odom:
@@ -157,7 +163,7 @@ Visualization Manager:
       Head Length: 0.20000000298023224
       Length: 0.30000001192092896
       Line Style: Billboards
-      Line Width: 0.00800000037997961
+      Line Width: 0.014999999664723873
       Name: Path
       Offset:
         X: 0
@@ -177,7 +183,7 @@ Visualization Manager:
       Marker Topic: /waypoint_markers
       Name: Waypoints
       Namespaces:
-        {}
+        waypoints: true
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -185,7 +191,7 @@ Visualization Manager:
       Marker Topic: /trajectory_markers
       Name: Trajectorypoints
       Namespaces:
-        {}
+        point: true
       Queue Size: 100
       Value: true
     - Alpha: 0.800000011920929
@@ -220,6 +226,27 @@ Visualization Manager:
       Topic: /mavros/local_position/pose
       Unreliable: false
       Value: true
+    - Alpha: 1
+      Class: rviz/RobotModel
+      Collision Enabled: false
+      Enabled: true
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+        base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+      Name: RobotModel
+      Robot Description: robot_description
+      TF Prefix: ""
+      Update Interval: 0
+      Value: true
+      Visual Enabled: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -248,7 +275,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 5.416576862335205
+      Distance: 6.696712493896484
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -256,17 +283,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 0.08836077898740768
-        Y: 0.17686687409877777
-        Z: 0.26007017493247986
+        X: 0.23210790753364563
+        Y: 0.13639935851097107
+        Z: 0.5399741530418396
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.6903979182243347
+      Pitch: 0.9503978490829468
       Target Frame: <Fixed Frame>
-      Yaw: 3.8885793685913086
+      Yaw: 3.4935686588287354
     Saved:
       - Class: rviz/Orbit
         Distance: 5.277319431304932

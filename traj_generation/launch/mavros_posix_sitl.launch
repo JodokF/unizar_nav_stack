@@ -68,6 +68,12 @@
 
     <node name="rviz" pkg="rviz" type="rviz" args="--display-config=/home/cconradi/Documents/catkin_ws/src/nav_stack_cc/traj_generation/cnfg/cnfg_no_vxblx_sim_debugging_px4.rviz" />
     
+    <param name="robot_description" textfile="/home/cconradi/Documents/catkin_ws/src/nav_stack_cc/traj_generation/meshes/cineMPC/cinempc.urdf" />
+
+
+
+
+
 
 
 
