@@ -94,7 +94,7 @@ class drone_connection{
 
     public:
         geometry_msgs::PoseStamped start_pose, safety_takeoff_pose;
-        bool vel_cmd_received, pose_cmd_received, drone_pose_received, use_cntrl, tracking_camera;
+        bool vel_cmd_received, pose_cmd_received, drone_pose_received, use_cntrl, tracking_camera, vxblx_active;
         void calc_cntrl_vel();
         void pub_to_ros_pid();
         void calc_error();
@@ -122,6 +122,8 @@ drone_connection::drone_connection(ros::NodeHandle& nh)
     nh.getParam("/drone_connection_node/Y_takeoff", start_pose.pose.orientation.z); // saved as RPY not Quaternion
     nh.getParam("/drone_connection_node/use_cntrl", use_cntrl); // determine if controller should be used or not
     nh.getParam("/drone_connection_node/tracking_camera", tracking_camera); // check if tracking camera is used
+    nh.getParam("/drone_connection_node/vxblx_active", vxblx_active);
+    
 
     //Transform Startpose RPY to Quaternions:
     tf2::Quaternion quaternion;
@@ -433,7 +435,7 @@ int drone_connection::establish_connection_and_take_off()
 
     if(drone_pose_received == true){
         safety_takeoff_pose = curr_pose;
-        safety_takeoff_pose.pose.position.z = 1.0;
+        safety_takeoff_pose.pose.position.z = 1.2;
     }
 
     // Set the frame in which the velocties are interpreted by the drone
@@ -486,20 +488,26 @@ int drone_connection::establish_connection_and_take_off()
             }
         }
 
-        if(curr_pose.pose.position.z < safety_takeoff_pose.pose.position.z && safety_takeoff_hight_reached == false) {
+        
+        if(vxblx_active == true){
             pose_pub.publish(safety_takeoff_pose);
         }
-        
-        if(curr_pose.pose.position.z > safety_takeoff_pose.pose.position.z - 0.1 && safety_takeoff_hight_reached == false) {
-            //if (delay_cntr == 100){
-                safety_takeoff_hight_reached = true;
-                ROS_INFO("Safety takeoff hight reached.");
-            //}
-            //delay_cntr++;
-        }
+        else{
+            if(curr_pose.pose.position.z < safety_takeoff_pose.pose.position.z && safety_takeoff_hight_reached == false) {
+                pose_pub.publish(safety_takeoff_pose);
+            }
+            
+            if(curr_pose.pose.position.z > safety_takeoff_pose.pose.position.z - 0.1 && safety_takeoff_hight_reached == false) {
+                //if (delay_cntr == 100){
+                    safety_takeoff_hight_reached = true;
+                    ROS_INFO("Safety takeoff hight reached.");
+                //}
+                //delay_cntr++;
+            }
 
-        if(safety_takeoff_hight_reached == true) {
-            pose_pub.publish(start_pose);
+            if(safety_takeoff_hight_reached == true) {
+                pose_pub.publish(start_pose);
+            }
         }
         
         if(vel_cmd_sub.getNumPublishers() > 0 && vel_cmd_received == true){

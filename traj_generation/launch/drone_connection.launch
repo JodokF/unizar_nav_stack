@@ -13,6 +13,7 @@
     <arg name="cntrl" default="false"/>
     <arg name="simulation" default="false"/>
     <arg name="tracking_camera" default="false"/>
+    <arg name="voxblox" default="false"/>
     
     <!-- Drone connection--> 
  
@@ -28,6 +29,7 @@
       <param name="use_cntrl" value="$(arg cntrl)" /> 
       <param name="simulation" value="$(arg simulation)" />    
       <param name="tracking_camera" value="$(arg tracking_camera)" />    
+      <param name="vxblx_active" value="$(arg voxblox)" /> 
 
         
     </node>

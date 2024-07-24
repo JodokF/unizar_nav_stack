@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+
+  <node name="voxblox_node" pkg="voxblox_ros" type="esdf_server" output="screen" args="-alsologtostderr" clear_params="true">
+    <remap from="/voxblox_node/tsdf_map_out" to="/tsdf_map" />
+    <remap from="/voxblox_node/esdf_map_out" to="/esdf_map" />
+    <remap from="pointcloud" to="/ouster/points"/>
+    <!-- <remap from="pointcloud" to="/velodyne_points"/> -->
+    <param name="tsdf_voxel_size" value="0.1" />
+    <param name="truncation_distance" value="0.5" />
+    <param name="color_mode" value="normals" />
+    <param name="enable_icp" value="false" />
+    <param name="icp_refine_roll_pitch" value="false" />
+    <param name="update_mesh_every_n_sec" value="1.0" />
+    <param name="update_esdf_every_n_sec" value="0.25" />
+    <param name="mesh_min_weight" value="2" />
+    <param name="method" value="fast" />
+    <param name="max_ray_length_m" value="10.0" />
+    <param name="use_const_weight" value="true" />
+    <param name="world_frame" value="odom"/>
+    <param name="verbose" value="false" />
+    <param name="mesh_filename" value="$(find voxblox_ros)/mesh_results/arena_1obs.ply" />
+    <param name="output_mesh_as_pcl_mesh" value="true" />
+    <param name="publish_tsdf_map" value="true" />
+    <param name="publish_tsdf_info" value="true" />
+    <param name="publish_esdf_map" value="true" />
+    <param name="publish_pointclouds" value="true" />
+    <param name="publish_traversable" value="true" />
+    <param name="traversability_radius" value="0.8" />
+    <param name="max_block_distance_from_body" value="50" />
+    <!-- <param name="clear_sphere_for_planning" value="true" /> -->
+  </node>
+
+  <!-- TF map <=> odom -->
+  <!-- <node pkg="tf" type="static_transform_publisher" name="broadcaster_odom" args="$0 0 0 1.57 0 3.14 odom odom_ned 100" /> -->
+  <node pkg="tf" type="static_transform_publisher" name="broadcaster_odom" 
+        args="$0 0 0 0 0 0 map odom 100" />
+        
+  <node name="rviz" pkg="rviz" type="rviz" 
+        args="--display-config=/home/cconradi/Documents/catkin_ws/src/nav_stack_cc/traj_generation/cnfg/with_vxblx.rviz" />
+   
+
+</launch>
