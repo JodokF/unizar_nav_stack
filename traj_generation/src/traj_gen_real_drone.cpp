@@ -107,13 +107,13 @@ void poly_traj_plan::poseCallback_nav_msg_odom(const nav_msgs::Odometry::ConstPt
         
             odom_info.header = odom_info_geo_msg.header; 
             odom_info.pose.pose = odom_info_geo_msg.pose;
+            odom_received = true;
         }
         else {
         ROS_WARN("Transform not available yet, waiting...");
         ros::Duration(0.5).sleep();
         }
 
-        odom_received = true;
     }
 }
 
