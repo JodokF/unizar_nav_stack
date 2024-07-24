@@ -566,13 +566,13 @@ bool poly_traj_plan::generate_hardcoded_traj()
     start.makeStartOrEnd(Eigen::Vector4d(odom_info.pose.pose.position.x,
                                          odom_info.pose.pose.position.y,
                                          odom_info.pose.pose.position.z, 
-                                         M_PI/4), 
+                                         -M_PI/2), 
                                          derivative_to_optimize);
 
     std::cout << "\n---\n";
     std::cout << "Start for traj. x, y, z: \t"  << odom_info.pose.pose.position.x << ", " 
                                                 << odom_info.pose.pose.position.y << ", " 
-                                                << odom_info.pose.pose.position.z << std::endl;
+                                                << odom_info.pose.pose.position.z << std::endl << std::endl;
     vertices.push_back(start);
 
 
@@ -627,7 +627,7 @@ bool poly_traj_plan::generate_hardcoded_traj()
     end.makeStartOrEnd(Eigen::Vector4d( goal.pose.position.x,
                                         goal.pose.position.y,
                                         goal.pose.position.z, 
-                                        -(5*M_PI)/4), // M_PI/4), 
+                                        M_PI), // M_PI/4), 
                                         derivative_to_optimize);
     vertices.push_back(end);
     std::cout << "Goal for traj. x, y, z: \t" << goal.pose.position.x << ", " 
