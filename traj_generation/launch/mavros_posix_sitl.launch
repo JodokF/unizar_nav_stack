@@ -56,21 +56,18 @@
 
     <node pkg="tf" type="static_transform_publisher" name="map2odom" args="$0 0 0 0 0 0 map odom 100" />
 
-  <!-- paint the drone trajectory in rviz-->
-  <node pkg="hector_trajectory_server" type="hector_trajectory_server" name="trajectory_server_loam" ns="gt" >
-      <param name="/target_frame_name" value="map" />
-      <param name="/source_frame_name" value="base_link" />
-      <param name="/trajectory_update_rate" value="10.0" />
-      <param name="/trajectory_publish_rate" value="10.0" />
-  </node>
+    <!-- paint the drone trajectory in rviz-->
+    <node pkg="hector_trajectory_server" type="hector_trajectory_server" name="trajectory_server_loam" ns="gt" >
+        <param name="/target_frame_name" value="map" />
+        <param name="/source_frame_name" value="base_link" />
+        <param name="/trajectory_update_rate" value="10.0" />
+        <param name="/trajectory_publish_rate" value="10.0" />
+    </node>
   
     <!-- <node name="vision_topic_handler" pkg="offb_sim" type="vision_topic_handler" /> -->
 
     <node name="rviz" pkg="rviz" type="rviz" args="--display-config=/home/cconradi/Documents/catkin_ws/src/nav_stack_cc/traj_generation/cnfg/cnfg_no_vxblx_sim_debugging_px4.rviz" />
     
-
-
-
-
+    <param name="robot_description" textfile="/home/cconradi/Documents/catkin_ws/src/nav_stack_cc/traj_generation/meshes/cinempc.urdf" />
 
 </launch>

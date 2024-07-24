@@ -5,11 +5,6 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Global Options1
-        - /TF1
-        - /TF1/Frames1
-        - /Path1
-        - /Optitrack1
-        - /EKF21
       Splitter Ratio: 0.5
     Tree Height: 440
   - Class: rviz/Selection
@@ -114,7 +109,7 @@ Visualization Manager:
         cine_mpc:
           Value: true
         map:
-          Value: true
+          Value: false
         map_ned:
           Value: false
         odom:
@@ -130,13 +125,14 @@ Visualization Manager:
       Tree:
         map:
           map_ned:
-            odom:
-              cine_mpc:
-                base_link:
-                  base_link_frd:
-                    {}
-              odom_ned:
-                {}
+            {}
+          odom:
+            cine_mpc:
+              base_link:
+                base_link_frd:
+                  {}
+            odom_ned:
+              {}
       Update Interval: 0
       Value: true
     - Alpha: 0.75
