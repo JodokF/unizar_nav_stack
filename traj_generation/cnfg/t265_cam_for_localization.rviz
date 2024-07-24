@@ -180,7 +180,7 @@ Visualization Manager:
       Head Length: 0.20000000298023224
       Length: 0.30000001192092896
       Line Style: Billboards
-      Line Width: 0.00800000037997961
+      Line Width: 0.009999999776482582
       Name: Path
       Offset:
         X: 0
@@ -200,7 +200,7 @@ Visualization Manager:
       Marker Topic: /waypoint_markers
       Name: Waypoints
       Namespaces:
-        {}
+        waypoints: true
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -208,7 +208,7 @@ Visualization Manager:
       Marker Topic: /trajectory_markers
       Name: Trajectorypoints
       Namespaces:
-        {}
+        point: true
       Queue Size: 100
       Value: true
     - Alpha: 0.75
@@ -290,7 +290,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 3.186290740966797
+      Distance: 4.978579521179199
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -298,17 +298,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 0.18164175748825073
-        Y: 0.4149644076824188
-        Z: 0.550560712814331
+        X: 0.29143956303596497
+        Y: 0.43364495038986206
+        Z: 0.6521679162979126
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.5903982520103455
+      Pitch: 0.7003980875015259
       Target Frame: <Fixed Frame>
-      Yaw: 4.613581657409668
+      Yaw: 4.0035810470581055
     Saved:
       - Class: rviz/Orbit
         Distance: 5.277319431304932

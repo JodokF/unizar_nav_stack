@@ -18,8 +18,8 @@
   
   <node name="rviz" pkg="rviz" type="rviz" 
   args="--display-config=/home/cconradi/Documents/catkin_ws/src/nav_stack_cc/traj_generation/cnfg/t265_cam_and_paths.rviz" />
-
-
     
+
+
 
 </launch>
